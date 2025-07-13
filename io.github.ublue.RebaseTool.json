@@ -1,0 +1,54 @@
+{
+  "app-id": "io.github.ublue.RebaseTool",
+  "runtime": "org.gnome.Platform",
+  "runtime-version": "45",
+  "sdk": "org.gnome.Sdk",
+  "command": "ublue-rebase-tool",
+  "finish-args": [
+    "--share=ipc",
+    "--socket=fallback-x11",
+    "--socket=wayland",
+    "--device=dri",
+    "--filesystem=host",
+    "--talk-name=org.freedesktop.Flatpak",
+    "--system-talk-name=org.projectatomic.rpmostree1",
+    "--allow=devel"
+  ],
+  "modules": [
+    {
+      "name": "ublue-rebase-tool",
+      "buildsystem": "simple",
+      "build-commands": [
+        "install -Dm755 ublue-rebase-tool.py /app/bin/ublue-rebase-tool",
+        "install -Dm644 ublue-rebase-tool.desktop /app/share/applications/io.github.ublue.RebaseTool.desktop",
+        "install -Dm644 icon.svg /app/share/icons/hicolor/scalable/apps/io.github.ublue.RebaseTool.svg",
+        "install -Dm644 io.github.ublue.RebaseTool.metainfo.xml /app/share/metainfo/io.github.ublue.RebaseTool.metainfo.xml",
+        "mkdir -p /app/share/ublue-rebase-tool",
+        "if [ -d web ] && [ -n \"$(ls -A web 2>/dev/null)\" ]; then cp -r web/* /app/share/ublue-rebase-tool/; else echo 'No web files to copy'; fi"
+      ],
+      "sources": [
+        {
+          "type": "file",
+          "path": "ublue-rebase-tool.py"
+        },
+        {
+          "type": "file",
+          "path": "ublue-rebase-tool.desktop"
+        },
+        {
+          "type": "file",
+          "path": "icon.svg"
+        },
+        {
+          "type": "file",
+          "path": "io.github.ublue.RebaseTool.metainfo.xml"
+        },
+        {
+          "type": "dir",
+          "path": "web",
+          "skip-arches": []
+        }
+      ]
+    }
+  ]
+}

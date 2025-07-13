@@ -1,0 +1,10 @@
+build/
+repo/
+dist/
+.flatpak-builder/
+__pycache__/
+*.py[cod]
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
