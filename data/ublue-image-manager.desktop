@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Universal Blue Image Manager
+GenericName=System Image Manager
+Comment=Modern GUI for managing Universal Blue custom images with guidance-based operations
+Exec=ublue-image-manager
+Icon=io.github.ublue.RebaseTool
+Terminal=false
+Type=Application
+Categories=System;Settings;
+Keywords=universal-blue;rebase;rollback;rpm-ostree;immutable;atomic;
+StartupNotify=true
+StartupWMClass=Universal Blue Image Manager
