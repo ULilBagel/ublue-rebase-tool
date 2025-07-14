@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Blue Image Manager</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .panel {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .panel h2 {
+            font-size: 1.4em;
+            margin-bottom: 20px;
+            color: #4ecdc4;
+            display: flex;
+            align-items: center;
+        }
+        
+        .status-grid {
+            display: grid;
+            gap: 12px;
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+        }
+        
+        .status-value {
+            font-family: 'SF Mono', Consolas, monospace;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 4px;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .btn-warning {
+            background: linear-gradient(45deg, #ff9800, #f57c00);
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .warning {
+            background: rgba(255, 193, 7, 0.2);
+            border-left: 4px solid #ffc107;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 16px 0;
+        }
+        
+        .info {
+            background: rgba(78, 205, 196, 0.2);
+            border-left: 4px solid #4ecdc4;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 16px 0;
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .instructions ol {
+            margin-left: 20px;
+            margin-top: 12px;
+        }
+        
+        .instructions li {
+            margin: 8px 0;
+        }
+        
+        .command {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 12px;
+            border-radius: 6px;
+            font-family: 'SF Mono', Consolas, monospace;
+            margin: 12px 0;
+            word-break: break-all;
+        }
+        
+        .images-grid {
+            display: grid;
+            gap: 16px;
+            margin-top: 16px;
+        }
+        
+        .image-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .image-card h4 {
+            color: #4ecdc4;
+            margin-bottom: 8px;
+        }
+        
+        .image-card p {
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        .image-url {
+            font-family: 'SF Mono', Consolas, monospace;
+            font-size: 0.8em;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin: 8px 0;
+        }
+        
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: 1fr; }
+            .header h1 { font-size: 2em; }
+            .panel { padding: 20px; }
+        }
+        
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Universal Blue Image Manager</h1>
+            <p>Modern libadwaita interface following Universal Blue best practices</p>
+            <div class="info">
+                <strong>Guidance Pattern:</strong> This application provides instructions and guidance rather than direct system modifications, following Universal Blue development standards.
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="panel">
+                <h2>📊 System Status</h2>
+                <div class="status-grid" id="systemStatus">
+                    <div class="status-item">
+                        <span>Current Image:</span>
+                        <span class="status-value" id="currentImage">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span>OS Version:</span>
+                        <span class="status-value" id="osVersion">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span>Deployment:</span>
+                        <span class="status-value" id="deploymentId">Loading...</span>
+                    </div>
+                </div>
+                <div style="margin-top: 16px;">
+                    <button class="btn btn-secondary" onclick="refreshStatus()">
+                        🔄 Refresh Status
+                    </button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>🎯 Quick Actions</h2>
+                <p>Explore available Universal Blue images and get guidance for system management.</p>
+                <div style="margin-top: 16px;">
+                    <button class="btn btn-primary" onclick="showAvailableImages()">
+                        📋 Show Available Images
+                    </button>
+                    <button class="btn btn-warning" onclick="showCustomRebase()">
+                        🔧 Custom Image URL
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel hidden" id="instructionsPanel">
+            <h2>📋 Instructions</h2>
+            <div id="instructionsContent"></div>
+        </div>
+
+        <div class="panel hidden" id="imagesPanel">
+            <h2>🎯 Available Universal Blue Images</h2>
+            <div id="imagesContent"></div>
+        </div>
+
+        <div class="panel hidden" id="customPanel">
+            <h2>🔧 Custom Image Rebase</h2>
+            <p>Enter a custom image URL to get rebase instructions.</p>
+            <div style="margin: 16px 0;">
+                <input type="text" id="customImageUrl" placeholder="ghcr.io/ublue-os/your-image:latest"
+                       style="width: 100%; padding: 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white;">
+            </div>
+            <button class="btn btn-warning" onclick="guideCustomImage()">📋 Get Instructions</button>
+        </div>
+    </div>
+
+    <script>
+        // API interaction functions
+        function updateSystemStatus(status) {
+            document.getElementById('currentImage').textContent = status.currentImage;
+            document.getElementById('osVersion').textContent = status.osVersion;
+            document.getElementById('deploymentId').textContent = status.deploymentId;
+            
+            // Add status indicators
+            const statusDiv = document.getElementById('systemStatus');
+            const existingIndicator = statusDiv.querySelector('.status-indicator');
+            if (existingIndicator) {
+                existingIndicator.remove();
+            }
+            
+            let indicator = '';
+            if (status.type === 'demo') {
+                indicator = '<div class="warning status-indicator">ℹ️ Demo mode - not on rpm-ostree system</div>';
+            } else if (status.isUniversalBlue) {
+                indicator = '<div class="info status-indicator">✅ Universal Blue system detected</div>';
+            } else {
+                indicator = '<div class="warning status-indicator">⚠️ Non-Universal Blue rpm-ostree system</div>';
+            }
+            
+            statusDiv.innerHTML += indicator;
+        }
+        
+        function showRebaseInstructions(instructions) {
+            const panel = document.getElementById('instructionsPanel');
+            const content = document.getElementById('instructionsContent');
+            
+            content.innerHTML = `
+                <div class="warning">${instructions.safetyNote}</div>
+                <div class="instructions">
+                    <h3>${instructions.title}</h3>
+                    <ol>
+                        ${instructions.instructions.map(inst => `<li>${inst}</li>`).join('')}
+                    </ol>
+                    <div class="command">$ ${instructions.command}</div>
+                </div>
+            `;
+            
+            panel.classList.remove('hidden');
+            panel.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function showAvailableImages(result) {
+            if (!result) {
+                // Request images from API
+                window.ublueImageAPI.getAvailableImages();
+                return;
+            }
+            
+            const panel = document.getElementById('imagesPanel');
+            const content = document.getElementById('imagesContent');
+            
+            content.innerHTML = `
+                <div class="images-grid">
+                    ${result.images.map(image => `
+                        <div class="image-card">
+                            <h4>${image.name}</h4>
+                            <p>${image.description}</p>
+                            <div class="image-url">${image.url}</div>
+                            <button class="btn btn-warning" onclick="window.ublueImageAPI.guideRebase('${image.url}')">
+                                📋 Get Instructions
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            panel.classList.remove('hidden');
+            panel.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // UI functions
+        function refreshStatus() {
+            window.ublueImageAPI.getSystemStatus();
+        }
+        
+        function showCustomRebase() {
+            const panel = document.getElementById('customPanel');
+            panel.classList.remove('hidden');
+            panel.scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('customImageUrl').focus();
+        }
+        
+        function guideCustomImage() {
+            const url = document.getElementById('customImageUrl').value.trim();
+            if (!url) {
+                alert('Please enter an image URL');
+                return;
+            }
+            window.ublueImageAPI.guideRebase(url);
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load initial status
+            setTimeout(() => {
+                if (window.ublueImageAPI) {
+                    window.ublueImageAPI.getSystemStatus();
+                }
+            }, 500);
+        });
+    </script>
+</body>
+</html>

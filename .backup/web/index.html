@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Blue Rebase Tool</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 20px;
+        }
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .panel {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            backdrop-filter: blur(10px);
+        }
+        .panel h2 {
+            color: #4ecdc4;
+            margin-bottom: 20px;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            color: white;
+            margin: 5px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(78, 205, 196, 0.4);
+        }
+        .status-item {
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .status-value {
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Universal Blue Rebase Tool</h1>
+            <p>Intuitive GUI for managing custom image rebases and rollbacks</p>
+        </div>
+        
+        <div class="panel">
+            <h2>📊 Current System Status</h2>
+            <div class="status-item">
+                <span>Current Image:</span>
+                <span class="status-value">ghcr.io/ublue-os/silverblue-main:latest</span>
+            </div>
+            <div class="status-item">
+                <span>OS Version:</span>
+                <span class="status-value">Fedora 40</span>
+            </div>
+            <div class="status-item">
+                <span>Deployment ID:</span>
+                <span class="status-value">a1b2c3d4</span>
+            </div>
+            <button class="btn">🔄 Refresh Status</button>
+        </div>
+        
+        <div class="panel">
+            <h2>🔄 Rebase Operations</h2>
+            <p>Use this interface to rebase your Universal Blue system to a different image.</p>
+            <button class="btn">🚀 Start Rebase</button>
+            <button class="btn">👁️ Preview Changes</button>
+            <button class="btn">⏪ Rollback</button>
+        </div>
+        
+        <div class="panel">
+            <h2>💻 Terminal Output</h2>
+            <div style="background: #1a1a1a; color: #00ff00; padding: 15px; border-radius: 8px; font-family: monospace;">
+                Universal Blue Rebase Tool initialized<br>
+                Ready for commands...
+            </div>
+        </div>
+    </div>
+</body>
+</html>

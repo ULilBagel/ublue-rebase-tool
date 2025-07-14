@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.ublue.RebaseTool</id>
+  
+  <name>Universal Blue Image Manager</name>
+  <summary>Modern GUI for managing Universal Blue custom images</summary>
+  
+  <description>
+    <p>
+      Universal Blue Image Manager provides a modern libadwaita-compliant interface for managing 
+      Universal Blue custom images. Following Universal Blue development best practices, it provides 
+      guidance and information rather than direct system modifications.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Visual system status monitoring with real rpm-ostree integration</li>
+      <li>Guidance-based rebase operations following UB patterns</li>
+      <li>Modern libadwaita interface with adaptive design</li>
+      <li>Portal-based security following UB standards</li>
+      <li>Support for all Universal Blue image variants</li>
+    </ul>
+  </description>
+  
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0+</project_license>
+  
+  <launchable type="desktop-id">io.github.ublue.RebaseTool.desktop</launchable>
+  
+  <releases>
+    <release version="2.0.0" date="$(date +%Y-%m-%d)">
+      <description>
+        <p>Complete rewrite following Universal Blue best practices</p>
+        <ul>
+          <li>Modern libadwaita interface with adaptive design</li>
+          <li>Guidance-based operations following UB patterns</li>
+          <li>Proper portal integration and security model</li>
+          <li>Universal Blue compliant architecture</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+  
+  <categories>
+    <category>System</category>
+    <category>Settings</category>
+  </categories>
+  
+  <developer_name>Universal Blue Community</developer_name>
+  <url type="homepage">https://github.com/universal-blue</url>
+</component>

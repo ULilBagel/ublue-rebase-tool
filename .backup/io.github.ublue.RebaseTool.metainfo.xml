@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.ublue.RebaseTool</id>
+  <n>Universal Blue Rebase Tool</n>
+  <summary>Intuitive GUI for managing Universal Blue custom images</summary>
+  <description>
+    <p>Universal Blue Rebase Tool provides an intuitive graphical interface for managing Universal Blue custom images.</p>
+  </description>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0+</project_license>
+  <launchable type="desktop-id">io.github.ublue.RebaseTool.desktop</launchable>
+  <releases>
+    <release version="1.0.0" date="2025-07-13">
+      <description><p>Initial release</p></description>
+    </release>
+  </releases>
+  <categories>
+    <category>System</category>
+    <category>Settings</category>
+  </categories>
+  <developer_name>Universal Blue Community</developer_name>
+</component>
