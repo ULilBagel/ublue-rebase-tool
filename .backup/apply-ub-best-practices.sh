@@ -1825,14 +1825,37 @@ This implementation represents a complete transformation that not only meets all
 Ready for community review, testing, and integration! 🚀
 PR_DESC
 
-gh pr create \
+# Create labels if they don't exist
+echo "📋 Setting up repository labels..."
+gh label create "universal-blue" --description "Universal Blue development related" --color "1e3c72" --force 2>/dev/null || true
+gh label create "best-practices" --description "Follows development best practices" --color "4ecdc4" --force 2>/dev/null || true
+gh label create "libadwaita" --description "Uses libadwaita GTK4 widgets" --color "44a08d" --force 2>/dev/null || true
+gh label create "gtk4" --description "GTK4 application development" --color "2a5298" --force 2>/dev/null || true
+
+# Create PR with labels (fallback gracefully if labels fail)
+echo "📝 Creating pull request..."
+if gh pr create \
     --title "$PR_TITLE" \
     --body-file pr_description.md \
     --label "enhancement" \
     --label "universal-blue" \
     --label "best-practices" \
     --label "libadwaita" \
-    --label "gtk4"
+    --label "gtk4" 2>/dev/null; then
+    echo "✅ PR created with all labels"
+else
+    # Fallback: create PR without labels
+    echo "⚠️ Creating PR without labels (will add them manually)"
+    gh pr create \
+        --title "$PR_TITLE" \
+        --body-file pr_description.md
+    
+    # Try to add labels one by one
+    PR_NUMBER=$(gh pr view --json number --jq '.number')
+    for label in "enhancement" "universal-blue" "best-practices" "libadwaita" "gtk4"; do
+        gh pr edit $PR_NUMBER --add-label "$label" 2>/dev/null || echo "  ⚠️ Could not add label: $label"
+    done
+fi
 
 rm pr_description.md
 
