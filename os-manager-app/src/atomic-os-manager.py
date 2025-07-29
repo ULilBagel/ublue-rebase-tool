@@ -16,6 +16,7 @@ gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 
 from gi.repository import Gtk, Adw, Gio, GLib
+import signal
 
 # Import shared modules
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -244,6 +245,14 @@ class AtomicOSManager(Adw.Application):
         if not self.window:
             self.window = OSManagerWindow(application=self)
         self.window.present()
+    
+    def do_shutdown(self):
+        """Called when the application is shutting down"""
+        # Clean up any running processes in the window
+        if self.window:
+            self.window.cleanup_on_shutdown()
+        # Call parent shutdown
+        Adw.Application.do_shutdown(self)
         
     def do_startup(self):
         """Called when the application starts up"""
@@ -260,6 +269,7 @@ class OSManagerWindow(Adw.ApplicationWindow):
         self.command_executor = CommandExecutor()
         self.pending_changes = {}
         self.is_system_update = False
+        self.update_process = None
         
         self.set_default_size(800, 600)
         
@@ -742,10 +752,14 @@ class OSManagerWindow(Adw.ApplicationWindow):
         button.set_sensitive(False)
         button.set_label("Checking...")
         
+        # Kill any existing update process before starting a new one
+        if self.update_process:
+            self.cleanup_update_process()
+            
         # Switch to progress view
         self.stack.set_visible_child_name("progress")
         self.spinner.start()
-        self.cancel_button.set_sensitive(False)  # Can't cancel system updates
+        self.cancel_button.set_sensitive(True)  # Allow cancelling system updates
         self.back_button.set_visible(False)
         
         # Clear log
@@ -937,6 +951,10 @@ class OSManagerWindow(Adw.ApplicationWindow):
         
     def on_apply_clicked(self, button):
         """Handle apply button click"""
+        # Kill any running update process before applying changes
+        if self.update_process:
+            self.cleanup_update_process()
+            
         # Disable the apply button immediately
         button.set_sensitive(False)
         self.status_bar.set_text("Preparing changes...")
@@ -1096,10 +1114,14 @@ class OSManagerWindow(Adw.ApplicationWindow):
         append_log_line("⚠️  Cancelling operation...")
         button.set_sensitive(False)
         
-        # Cancel the current command execution
-        self.command_executor.cancel_current_execution()
-        
-        # Also run rpm-ostree cancel to cancel the transaction
+        # If this is a system update, kill the update process
+        if self.is_system_update and self.update_process:
+            self.cleanup_update_process()
+        else:
+            # Cancel the current command execution
+            self.command_executor.cancel_current_execution()
+            
+            # Also run rpm-ostree cancel to cancel the transaction
         try:
             subprocess.run(["flatpak-spawn", "--host", "rpm-ostree", "cancel"], 
                          capture_output=True, text=True)
@@ -1260,12 +1282,13 @@ class OSManagerWindow(Adw.ApplicationWindow):
                 update_cmd = ["flatpak-spawn", "--host", "ublue-update"]
                 
             # Run the update command
-            process = subprocess.Popen(
+            self.update_process = subprocess.Popen(
                 update_cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
-                bufsize=1
+                bufsize=1,
+                preexec_fn=os.setsid  # Create new process group for proper cleanup
             )
             
             # Track if we need to show action buttons
@@ -1276,10 +1299,16 @@ class OSManagerWindow(Adw.ApplicationWindow):
             
             # Read output line by line with timeout check
             while True:
-                line = process.stdout.readline()
+                if self.update_process is None:
+                    # Process was cancelled
+                    append_log("\n[Update cancelled by user]")
+                    update_ui("Update cancelled", finished=True, success=False, updates_found=False)
+                    return
+                    
+                line = self.update_process.stdout.readline()
                 if not line:
                     # Check if process is still running
-                    if process.poll() is not None:
+                    if self.update_process.poll() is not None:
                         break
                     # Check for 30 second timeout
                     elapsed = (datetime.now() - start_time).total_seconds()
@@ -1304,9 +1333,14 @@ class OSManagerWindow(Adw.ApplicationWindow):
                     update_ui("Updates staged - Action required", finished=True, success=True, updates_found=True)
                     break
                     
-            process.wait()
+            if self.update_process:
+                self.update_process.wait()
+                returncode = self.update_process.returncode
+            else:
+                # Process was cancelled
+                returncode = -1
             
-            if process.returncode == 0:
+            if returncode == 0:
                 append_log("=" * 50)
                 if show_action_buttons:
                     append_log("✓ System update completed successfully!")
@@ -1323,6 +1357,9 @@ class OSManagerWindow(Adw.ApplicationWindow):
         except Exception as e:
             append_log(f"✗ Error running system update: {str(e)}")
             update_ui("Update error", finished=True, success=False, updates_found=False)
+        finally:
+            # Clean up process reference
+            self.update_process = None
     
     def on_reboot_clicked(self, button):
         """Handle reboot button click"""
@@ -1345,6 +1382,10 @@ class OSManagerWindow(Adw.ApplicationWindow):
     
     def on_back_clicked(self, button):
         """Return to configuration view"""
+        # Kill any running update process when leaving the view
+        if self.update_process:
+            self.cleanup_update_process()
+            
         # Reset button visibility
         self.cancel_button.set_visible(True)
         self.back_button.set_visible(False)
@@ -1356,6 +1397,53 @@ class OSManagerWindow(Adw.ApplicationWindow):
         
         # Clear the system update flag
         self.is_system_update = False
+    
+    def cleanup_update_process(self):
+        """Properly terminate the update process and all child processes"""
+        if self.update_process:
+            try:
+                # Kill the entire process group to ensure topgrade and other children are terminated
+                os.killpg(os.getpgid(self.update_process.pid), signal.SIGTERM)
+                # Give processes time to terminate gracefully
+                import time
+                time.sleep(0.5)
+                # Force kill if still running
+                if self.update_process.poll() is None:
+                    os.killpg(os.getpgid(self.update_process.pid), signal.SIGKILL)
+            except Exception as e:
+                print(f"Error cleaning up update process: {e}")
+                # Try direct kill as fallback
+                try:
+                    self.update_process.kill()
+                except:
+                    pass
+            finally:
+                self.update_process = None
+                
+        # Also kill any orphaned topgrade processes
+        self.kill_orphaned_topgrade()
+    
+    def cleanup_on_shutdown(self):
+        """Clean up when application is closing"""
+        # Clean up any running update process
+        if self.update_process:
+            self.cleanup_update_process()
+        # Also kill any orphaned topgrade processes
+        self.kill_orphaned_topgrade()
+    
+    def kill_orphaned_topgrade(self):
+        """Kill any topgrade processes that might be running"""
+        try:
+            # Use pkill to kill topgrade processes
+            subprocess.run(["flatpak-spawn", "--host", "pkill", "-f", "topgrade"], 
+                         capture_output=True, timeout=2)
+        except:
+            # If pkill fails, try killall
+            try:
+                subprocess.run(["flatpak-spawn", "--host", "killall", "topgrade"], 
+                             capture_output=True, timeout=2)
+            except:
+                pass
         
         
 def main():
