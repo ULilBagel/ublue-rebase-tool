@@ -54,7 +54,7 @@
   </screenshots>
   
   <releases>
-    <release version="2.1.0" date="2025-07-29">
+    <release version="2.1.1" date="2025-07-29">
       <description>
         <p>Complete rewrite following Universal Blue best practices:</p>
         <ul>
