@@ -74,10 +74,10 @@ flatpak install --user io.github.ublue.RebaseTool.flatpak
 
 ## 📸 Screenshots
 
-![Main Window](docs/screenshots/main-window.png)
+![Main Window]([docs/screenshots/main-window.png](https://github.com/ULilBagel/ublue-rebase-tool/blob/master/main-window.png))
 *Main application window showing current deployment and available images*
 
-![Progress Dialog](docs/screenshots/progress-dialog.png)
+![Progress Dialog]([docs/screenshots/progress-dialog.png](https://github.com/ULilBagel/ublue-rebase-tool/blob/master/progress-diag.png))
 *Live progress tracking during rebase operation*
 
 ## 🏗️ Architecture
