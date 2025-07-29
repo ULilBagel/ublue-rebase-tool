@@ -38,6 +38,18 @@
   </developer>
   
   <releases>
+    <release version="0.6" date="2025-01-29">
+      <description>
+        <p>Major release - Complete rewrite as specialized tool</p>
+        <ul>
+          <li>Dedicated rollback tool with enhanced functionality</li>
+          <li>Pin/unpin deployment support with proper error handling</li>
+          <li>Enhanced UI similar to bazzite-rollback-helper</li>
+          <li>Fixed application crashes during rollback</li>
+          <li>Improved thread safety for UI updates</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.0.0" date="2024-01-29">
       <description>
         <p>Initial release of standalone Atomic Rollback Tool</p>

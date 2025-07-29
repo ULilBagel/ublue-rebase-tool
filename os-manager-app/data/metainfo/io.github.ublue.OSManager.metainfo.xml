@@ -44,6 +44,18 @@
   </developer>
   
   <releases>
+    <release version="0.6" date="2025-01-29">
+      <description>
+        <p>Major release - New image-specific configuration tool</p>
+        <ul>
+          <li>System update integration with reboot prompts</li>
+          <li>Smart DX mode visibility based on variant capabilities</li>
+          <li>Fixed Bazzite variant naming with registry validation</li>
+          <li>Enhanced UI with system maintenance at the top</li>
+          <li>Action buttons after successful system updates</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.0.0" date="2024-01-29">
       <description>
         <p>Initial release of Atomic OS Manager</p>

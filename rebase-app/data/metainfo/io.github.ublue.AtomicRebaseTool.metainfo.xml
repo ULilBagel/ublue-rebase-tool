@@ -38,6 +38,18 @@
   </developer>
   
   <releases>
+    <release version="0.6" date="2025-01-29">
+      <description>
+        <p>Major release - Complete rewrite as specialized tool</p>
+        <ul>
+          <li>Fixed "remove with cleanup -p" error during rebase</li>
+          <li>Added proper cleanup before rebase operations</li>
+          <li>Enhanced Fedora support with latest tag option</li>
+          <li>Improved error handling and user feedback</li>
+          <li>Registry-based image validation</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.0.0" date="2024-01-29">
       <description>
         <p>Initial release of standalone Atomic Rebase Tool</p>
