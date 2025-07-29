@@ -1,4 +1,4 @@
-name: Build Flatpak
+name: Build Flatpaks
 
 on:
   push:
@@ -12,8 +12,8 @@ permissions:
   packages: write
 
 jobs:
-  flatpak:
-    name: Build Flatpak
+  build-rollback:
+    name: Build Rollback Tool
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-47
@@ -23,23 +23,73 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Build flatpak
+    - name: Build Rollback Tool flatpak
       uses: flatpak/flatpak-github-actions/flatpak-builder@v6
       with:
-        bundle: io.github.ublue.RebaseTool.flatpak
-        manifest-path: io.github.ublue.RebaseTool.json
-        cache-key: flatpak-builder-${{ github.sha }}
+        bundle: io.github.ublue.RollbackTool.flatpak
+        manifest-path: io.github.ublue.RollbackTool.json
+        cache-key: flatpak-builder-rollback-${{ github.sha }}
 
-    - name: Upload flatpak bundle
+    - name: Upload Rollback Tool bundle
       uses: actions/upload-artifact@v4
       with:
-        name: flatpak-bundle
-        path: io.github.ublue.RebaseTool.flatpak
+        name: rollback-tool-bundle
+        path: io.github.ublue.RollbackTool.flatpak
+        retention-days: 7
+
+  build-rebase:
+    name: Build Rebase Tool
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-47
+      options: --privileged
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Build Rebase Tool flatpak
+      uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+      with:
+        bundle: io.github.ublue.AtomicRebaseTool.flatpak
+        manifest-path: io.github.ublue.AtomicRebaseTool.json
+        cache-key: flatpak-builder-rebase-${{ github.sha }}
+
+    - name: Upload Rebase Tool bundle
+      uses: actions/upload-artifact@v4
+      with:
+        name: rebase-tool-bundle
+        path: io.github.ublue.AtomicRebaseTool.flatpak
+        retention-days: 7
+
+  build-os-manager:
+    name: Build OS Manager
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-47
+      options: --privileged
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Build OS Manager flatpak
+      uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+      with:
+        bundle: io.github.ublue.OSManager.flatpak
+        manifest-path: io.github.ublue.OSManager.json
+        cache-key: flatpak-builder-os-manager-${{ github.sha }}
+
+    - name: Upload OS Manager bundle
+      uses: actions/upload-artifact@v4
+      with:
+        name: os-manager-bundle
+        path: io.github.ublue.OSManager.flatpak
         retention-days: 7
 
   release:
     name: Create Release
-    needs: flatpak
+    needs: [build-rollback, build-rebase, build-os-manager]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/master' && contains(github.event.head_commit.message, '[release]')
     
@@ -47,15 +97,25 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Download flatpak bundle
+    - name: Download Rollback Tool bundle
       uses: actions/download-artifact@v4
       with:
-        name: flatpak-bundle
+        name: rollback-tool-bundle
 
-    - name: Get version from metainfo
+    - name: Download Rebase Tool bundle
+      uses: actions/download-artifact@v4
+      with:
+        name: rebase-tool-bundle
+
+    - name: Download OS Manager bundle
+      uses: actions/download-artifact@v4
+      with:
+        name: os-manager-bundle
+
+    - name: Get version from Rollback Tool metainfo
       id: get_version
       run: |
-        VERSION=$(grep -oPm1 "(?<=<release version=\")[^\"]+" data/metainfo/io.github.ublue.RebaseTool.metainfo.xml | head -1)
+        VERSION=$(grep -oPm1 "(?<=<release version=\")[^\"]+" rollback-app/data/metainfo/io.github.ublue.RollbackTool.metainfo.xml | head -1)
         echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
         echo "Version found: ${VERSION}"
 
@@ -65,16 +125,28 @@ jobs:
       run: |
         gh release create v${{ steps.get_version.outputs.VERSION }} \
           --title "Release v${{ steps.get_version.outputs.VERSION }}" \
-          --notes "## Atomic Image Manager v${{ steps.get_version.outputs.VERSION }}
+          --notes "## Atomic Tools Suite v${{ steps.get_version.outputs.VERSION }}
+        
+        This release includes three specialized tools for managing atomic/ostree systems:
+        
+        ### 🔄 Atomic Rollback Tool
+        Specialized tool for managing system rollbacks with enhanced features similar to bazzite-rollback-helper.
+        
+        ### 🔀 Atomic Rebase Tool  
+        Dedicated tool for rebasing to different atomic images with support for all major distributions.
+        
+        ### ⚙️ Atomic OS Manager
+        Image-specific configuration tool with dynamic UI based on your current system image.
         
         ### Installation
         \`\`\`bash
-        # Download the flatpak file, then:
-        flatpak install --user io.github.ublue.RebaseTool.flatpak
-        
-        # Or install runtime first if needed:
+        # Install runtime if needed:
         flatpak install flathub org.gnome.Platform//47
-        flatpak install --user io.github.ublue.RebaseTool.flatpak
+        
+        # Install individual tools:
+        flatpak install --user io.github.ublue.RollbackTool.flatpak
+        flatpak install --user io.github.ublue.AtomicRebaseTool.flatpak
+        flatpak install --user io.github.ublue.OSManager.flatpak
         \`\`\`
         
         ### Features
@@ -83,16 +155,20 @@ jobs:
         - Support for Fedora atomic and Universal Blue variants
         - Full deployment history access
         - Safe rebase and rollback operations
+        - Image-specific configuration options
+        - System update integration
         
         ### Requirements
         - Flatpak
         - GNOME 47 runtime
         - Atomic/ostree system (Silverblue, Kinoite, Universal Blue variants)"
 
-    - name: Upload Release Asset
+    - name: Upload Release Assets
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         gh release upload v${{ steps.get_version.outputs.VERSION }} \
-          ./io.github.ublue.RebaseTool.flatpak \
+          ./io.github.ublue.RollbackTool.flatpak \
+          ./io.github.ublue.AtomicRebaseTool.flatpak \
+          ./io.github.ublue.OSManager.flatpak \
           --clobber
