@@ -24,6 +24,7 @@ except ImportError as e:
 from command_executor import CommandExecutor
 from deployment_manager import DeploymentManager
 from history_manager import HistoryManager
+from registry_manager import RegistryManager
 from ui.simple_confirmation_dialog import ConfirmationDialog
 
 
@@ -58,6 +59,10 @@ class AtomicImageWindow(Adw.ApplicationWindow):
         self.command_executor = CommandExecutor()
         self.deployment_manager = DeploymentManager()
         self.history_manager = HistoryManager()
+        self.registry_manager = RegistryManager()
+        
+        # Initialize search state
+        self.history_search_text = ""
         
         # Check if running on atomic/ostree system
         if not self.check_atomic_system():
@@ -266,10 +271,10 @@ class AtomicImageWindow(Adw.ApplicationWindow):
         box.set_margin_start(12)
         box.set_margin_end(12)
         
-        # Deployments list
+        # System deployments section (combines current and all deployments)
         deployments_group = Adw.PreferencesGroup()
         deployments_group.set_title("System Deployments")
-        deployments_group.set_description("All available system deployments")
+        deployments_group.set_description("All local deployments available on your system")
         
         self.deployments_list = Gtk.ListBox()
         self.deployments_list.set_selection_mode(Gtk.SelectionMode.NONE)
@@ -278,17 +283,72 @@ class AtomicImageWindow(Adw.ApplicationWindow):
         deployments_group.add(self.deployments_list)
         box.append(deployments_group)
         
-        # History section
+        # Pinned deployments section
+        self.pinned_group = Adw.PreferencesGroup()
+        self.pinned_group.set_title("Pinned Deployments")
+        self.pinned_group.set_description("Deployments that are protected from automatic cleanup")
+        self.pinned_group.set_visible(False)  # Hidden by default
+        
+        self.pinned_list = Gtk.ListBox()
+        self.pinned_list.set_selection_mode(Gtk.SelectionMode.NONE)
+        self.pinned_list.add_css_class("boxed-list")
+        
+        self.pinned_group.add(self.pinned_list)
+        box.append(self.pinned_group)
+        
+        # Historical deployments section (90 days)
         history_group = Adw.PreferencesGroup()
-        history_group.set_title("Deployment History")
-        history_group.set_description("Recent system changes")
+        history_group.set_title("Historical Deployments")
+        history_group.set_description("Browse available images from the registry")
+        
+        # Add expander for historical deployments
+        history_expander = Adw.ExpanderRow()
+        history_expander.set_title("Show Historical Deployments")
+        history_expander.set_subtitle("Search and browse images from the last 90 days")
+        
+        # Container for search and history list
+        history_container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        history_container.set_margin_top(6)
+        
+        # Add search entry
+        self.history_search_entry = Gtk.SearchEntry()
+        self.history_search_entry.set_placeholder_text("Search deployments (e.g., 'stable', '20240722', 'testing')...")
+        self.history_search_entry.set_margin_start(12)
+        self.history_search_entry.set_margin_end(12)
+        self.history_search_entry.set_margin_bottom(6)
+        self.history_search_entry.connect("search-changed", self.on_history_search_changed)
+        history_container.append(self.history_search_entry)
+        
+        # Scrolled window for history list
+        history_scrolled = Gtk.ScrolledWindow()
+        history_scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        history_scrolled.set_min_content_height(200)
+        history_scrolled.set_max_content_height(400)
         
         self.history_list = Gtk.ListBox()
         self.history_list.set_selection_mode(Gtk.SelectionMode.NONE)
         self.history_list.add_css_class("boxed-list")
+        self.history_list.set_filter_func(self.history_filter_func)
         
-        history_group.add(self.history_list)
+        history_scrolled.set_child(self.history_list)
+        history_container.append(history_scrolled)
+        
+        history_expander.add_row(history_container)
+        history_group.add(history_expander)
         box.append(history_group)
+        
+        # Add refresh button at the bottom
+        refresh_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        refresh_box.set_halign(Gtk.Align.CENTER)
+        refresh_box.set_margin_top(12)
+        
+        refresh_button = Gtk.Button()
+        refresh_button.set_label("Refresh Deployments")
+        refresh_button.add_css_class("pill")
+        refresh_button.connect("clicked", lambda b: self.refresh_rollback_deployments())
+        refresh_box.append(refresh_button)
+        
+        box.append(refresh_box)
         
         # Wrap in scrolled window
         scrolled = Gtk.ScrolledWindow()
@@ -306,8 +366,8 @@ class AtomicImageWindow(Adw.ApplicationWindow):
                 "description": "Immutable desktop OS with GNOME",
                 "variants": [
                     {"name": "Latest", "suffix": ":latest", "desc": "Latest stable release"},
-                    {"name": "40", "suffix": ":40", "desc": "Fedora 40"},
                     {"name": "41", "suffix": ":41", "desc": "Fedora 41"},
+                    {"name": "40", "suffix": ":40", "desc": "Fedora 40"},
                     {"name": "Rawhide", "suffix": ":rawhide", "desc": "Development version"}
                 ]
             },
@@ -317,8 +377,8 @@ class AtomicImageWindow(Adw.ApplicationWindow):
                 "description": "Immutable desktop OS with KDE Plasma",
                 "variants": [
                     {"name": "Latest", "suffix": ":latest", "desc": "Latest stable release"},
-                    {"name": "40", "suffix": ":40", "desc": "Fedora 40"},
                     {"name": "41", "suffix": ":41", "desc": "Fedora 41"},
+                    {"name": "40", "suffix": ":40", "desc": "Fedora 40"},
                     {"name": "Rawhide", "suffix": ":rawhide", "desc": "Development version"}
                 ]
             },
@@ -330,9 +390,10 @@ class AtomicImageWindow(Adw.ApplicationWindow):
                     {"name": "Default", "suffix": "", "desc": "Base gaming image"},
                     {"name": "GNOME", "suffix": "-gnome", "desc": "GNOME desktop"},
                     {"name": "Deck", "suffix": "-deck", "desc": "Steam Deck-like experience"},
+                    {"name": "Deck GNOME", "suffix": "-deck-gnome", "desc": "Steam Deck with GNOME"},
                     {"name": "DX", "suffix": "-dx", "desc": "Developer edition"},
                     {"name": "NVIDIA", "suffix": "-nvidia", "desc": "NVIDIA GPU support"},
-                    {"name": "AMD", "suffix": "-asus", "desc": "ASUS/AMD optimized"}
+                    {"name": "ASUS", "suffix": "-asus", "desc": "ASUS hardware optimized"}
                 ]
             },
             {
@@ -461,64 +522,444 @@ class AtomicImageWindow(Adw.ApplicationWindow):
             self.current_deployment_list.append(row)
             
     def update_deployments_list(self, deployments):
-        """Update deployments list for rollback"""
+        """Update deployment lists"""
+        # Separate pinned deployments
+        pinned_deployments = [d for d in deployments if d.is_pinned]
+        
+        # Update combined deployments list
+        self._update_combined_deployments_list(deployments)
+        
+        # Update pinned deployments list
+        self._update_pinned_deployments_list(pinned_deployments)
+        
+        # Update historical deployments from registry (not local deployments)
+        self._update_historical_deployments_list(deployments)
+    
+    def _update_combined_deployments_list(self, deployments):
+        """Update the combined deployments list"""
         # Clear existing
         child = self.deployments_list.get_first_child()
         while child:
             next_child = child.get_next_sibling()
             self.deployments_list.remove(child)
             child = next_child
-            
-        # Show all deployments (Universal Blue keeps 90-day history)
+        
         for i, deployment in enumerate(deployments):
             row = Adw.ActionRow()
             
-            # Format title with deployment info
-            if i == 0:
-                title = f"Current: {deployment.origin}"
-                row.add_css_class("accent")
+            # Determine deployment status
+            is_pending = i == 0 and not deployment.is_booted
+            is_current = deployment.is_booted
+            is_previous = not is_pending and not is_current
+            
+            # Set icon based on status
+            if is_current:
+                icon_name = "emblem-default-symbolic"
+            elif is_pending:
+                icon_name = "view-refresh-symbolic"
             else:
-                title = f"Previous: {deployment.origin}"
-                
+                icon_name = "document-open-recent-symbolic"
+            
+            icon = Gtk.Image.new_from_icon_name(icon_name)
+            row.add_prefix(icon)
+            
+            # Extract clean image name
+            image_name = self._extract_image_name(deployment.origin)
+            
+            # Build title with status
+            if is_current:
+                title = f"{image_name} (Current)"
+            elif is_pending:
+                title = f"{image_name} (Pending)"
+            else:
+                title = image_name
+            
             row.set_title(title)
             
-            # Add detailed subtitle
-            subtitle_parts = [f"Deployed: {deployment.timestamp}"]
-            if hasattr(deployment, 'version') and deployment.version:
-                subtitle_parts.append(f"Version: {deployment.version}")
+            # Build subtitle
+            subtitle_parts = []
+            if deployment.version:
+                subtitle_parts.append(f"v{deployment.version}")
+            subtitle_parts.append(deployment.timestamp)
+            
             row.set_subtitle(" • ".join(subtitle_parts))
             
-            # Add status indicators
-            if deployment.is_booted:
+            # Add status indicator
+            if is_current:
                 status_label = Gtk.Label(label="● Active")
                 status_label.add_css_class("success")
                 status_label.set_valign(Gtk.Align.CENTER)
                 row.add_suffix(status_label)
-            elif i == 0:
-                status_label = Gtk.Label(label="● Pending")
-                status_label.add_css_class("warning") 
+                row.add_css_class("accent")
+                
+                # Add pin button for current deployment if not already pinned
+                if not deployment.is_pinned:
+                    pin_button = Gtk.Button()
+                    pin_button.set_icon_name("view-pin-symbolic")
+                    pin_button.set_tooltip_text("Pin this deployment")
+                    pin_button.set_valign(Gtk.Align.CENTER)
+                    pin_button.add_css_class("flat")
+                    pin_button.connect("clicked",
+                                     lambda b, d=deployment: self.on_pin_deployment(d))
+                    row.add_suffix(pin_button)
+            elif is_pending:
+                status_label = Gtk.Label(label="● Pending Reboot")
+                status_label.add_css_class("warning")
                 status_label.set_valign(Gtk.Align.CENTER)
                 row.add_suffix(status_label)
-                
-            # Add rollback button for non-current deployments
-            if i > 0:
+            
+            # Add rollback button only for previous deployments (not current or pending)
+            if is_previous:
                 rollback_button = Gtk.Button()
                 rollback_button.set_label("Rollback")
                 rollback_button.set_valign(Gtk.Align.CENTER)
-                rollback_button.add_css_class("destructive-action")
+                rollback_button.add_css_class("suggested-action")
                 rollback_button.connect("clicked",
                                       lambda b, idx=i: self.on_rollback_clicked(idx))
                 row.add_suffix(rollback_button)
             
             self.deployments_list.append(row)
+    
+    def _update_pinned_deployments_list(self, pinned_deployments):
+        """Update the pinned deployments list"""
+        # Clear existing
+        child = self.pinned_list.get_first_child()
+        while child:
+            next_child = child.get_next_sibling()
+            self.pinned_list.remove(child)
+            child = next_child
+        
+        # Show/hide the section based on whether there are pinned deployments
+        if pinned_deployments:
+            self.pinned_group.set_visible(True)
             
-        # Add info if limited deployments shown
-        if len(deployments) < 4:
+            for deployment in pinned_deployments:
+                row = Adw.ActionRow()
+                
+                # Set icon for pinned deployments
+                icon = Gtk.Image.new_from_icon_name("view-pin-symbolic")
+                row.add_prefix(icon)
+                
+                # Extract clean image name
+                image_name = self._extract_image_name(deployment.origin)
+                row.set_title(image_name)
+                
+                # Build subtitle
+                subtitle_parts = []
+                if deployment.version:
+                    subtitle_parts.append(f"v{deployment.version}")
+                subtitle_parts.append(deployment.timestamp)
+                subtitle_parts.append("Protected from cleanup")
+                
+                row.set_subtitle(" • ".join(subtitle_parts))
+                
+                # Add unpin button
+                unpin_button = Gtk.Button()
+                unpin_button.set_icon_name("edit-delete-symbolic")
+                unpin_button.set_tooltip_text("Unpin this deployment")
+                unpin_button.set_valign(Gtk.Align.CENTER)
+                unpin_button.add_css_class("flat")
+                unpin_button.connect("clicked",
+                                   lambda b, d=deployment: self.on_unpin_deployment(d))
+                row.add_suffix(unpin_button)
+                
+                # Add rollback button if not current
+                if not deployment.is_booted:
+                    rollback_button = Gtk.Button()
+                    rollback_button.set_label("Rollback")
+                    rollback_button.set_valign(Gtk.Align.CENTER)
+                    rollback_button.add_css_class("suggested-action")
+                    # Find the deployment index
+                    for i, d in enumerate(self.deployment_manager.get_all_deployments()):
+                        if d.id == deployment.id:
+                            rollback_button.connect("clicked",
+                                                  lambda b, idx=i: self.on_rollback_clicked(idx))
+                            break
+                    row.add_suffix(rollback_button)
+                
+                self.pinned_list.append(row)
+        else:
+            self.pinned_group.set_visible(False)
+    
+    def _update_historical_deployments_list(self, deployments):
+        """Update the historical deployments list with 90-day registry history"""
+        # Clear existing
+        child = self.history_list.get_first_child()
+        while child:
+            next_child = child.get_next_sibling()
+            self.history_list.remove(child)
+            child = next_child
+        
+        # Check if skopeo is available
+        if not self.registry_manager.check_skopeo_available():
             info_row = Adw.ActionRow()
-            info_row.set_title("ℹ️ Limited deployment history available")
-            info_row.set_subtitle("Universal Blue systems typically maintain 90-day history")
+            info_row.set_title("Historical images unavailable")
+            info_row.set_subtitle("Install skopeo to browse historical images")
             info_row.add_css_class("dim-label")
-            self.deployments_list.append(info_row)
+            self.history_list.append(info_row)
+            return
+        
+        # Get current deployment to determine registry and image
+        current_deployment = self.deployment_manager.get_current_deployment()
+        if not current_deployment:
+            return
+        
+        # Extract registry info from current deployment
+        registry, image_name, current_tag = self.registry_manager.get_image_info_from_deployment(current_deployment)
+        
+        if not registry or not image_name:
+            # Can't determine registry info
+            info_row = Adw.ActionRow()
+            info_row.set_title("Historical images unavailable")
+            info_row.set_subtitle("Unable to determine current image registry")
+            self.history_list.append(info_row)
+            return
+        
+        # Show loading state
+        loading_row = Adw.ActionRow()
+        loading_row.set_title("Loading historical images...")
+        loading_row.set_subtitle(f"Querying {registry}/{image_name}")
+        spinner = Gtk.Spinner()
+        spinner.start()
+        loading_row.add_suffix(spinner)
+        self.history_list.append(loading_row)
+        
+        # Fetch historical images in background
+        def fetch_historical():
+            try:
+                # Determine branch from current tag
+                branch = "stable"
+                if "testing" in current_tag:
+                    branch = "testing"
+                elif current_tag in ["stable", "testing"]:
+                    branch = current_tag
+                
+                # Get images from last 90 days
+                historical_images = self.registry_manager.get_recent_images(
+                    registry, image_name, days=90, branch=branch
+                )
+                
+                # Update UI in main thread
+                GLib.idle_add(self._populate_historical_list, historical_images, registry, image_name)
+                
+            except Exception as e:
+                print(f"Error fetching historical images: {e}")
+                GLib.idle_add(self._show_historical_error, str(e))
+        
+        # Start background thread
+        threading.Thread(target=fetch_historical, daemon=True).start()
+    
+    def _populate_historical_list(self, images, registry, image_name):
+        """Populate the historical list with fetched images"""
+        # Clear loading state
+        child = self.history_list.get_first_child()
+        while child:
+            next_child = child.get_next_sibling()
+            self.history_list.remove(child)
+            child = next_child
+        
+        if not images:
+            empty_row = Adw.ActionRow()
+            empty_row.set_title("No historical images found")
+            empty_row.set_subtitle("No images available from the last 90 days")
+            self.history_list.append(empty_row)
+            return
+        
+        # Group by time periods
+        from datetime import datetime, timedelta
+        today = datetime.now().date()
+        
+        for img in images:
+            row = Adw.ActionRow()
+            
+            # Format the title
+            clean_name = image_name.replace("-", " ").title()
+            row.set_title(f"{clean_name} - {img.tag}")
+            
+            # Calculate time description
+            time_desc = ""
+            if img.date:
+                days_ago = (today - img.date.date()).days
+                
+                if days_ago == 0:
+                    time_desc = "Released today"
+                elif days_ago == 1:
+                    time_desc = "Released yesterday"
+                elif days_ago < 7:
+                    time_desc = f"Released {days_ago} days ago"
+                elif days_ago < 30:
+                    weeks = days_ago // 7
+                    time_desc = f"Released {weeks} week{'s' if weeks > 1 else ''} ago"
+                else:
+                    months = days_ago // 30
+                    time_desc = f"Released {months} month{'s' if months > 1 else ''} ago"
+                
+                # Add date to subtitle
+                date_str = img.date.strftime("%Y-%m-%d")
+                row.set_subtitle(f"{time_desc} • {date_str}")
+            else:
+                row.set_subtitle(f"Tag: {img.tag}")
+            
+            # Add rebase button
+            rebase_button = Gtk.Button()
+            rebase_button.set_label("Rebase")
+            rebase_button.set_valign(Gtk.Align.CENTER)
+            rebase_button.add_css_class("suggested-action")
+            
+            # Determine the full image reference based on current deployment protocol
+            current_deployment = self.deployment_manager.get_current_deployment()
+            if current_deployment and "ostree-unverified-registry:" in current_deployment.origin:
+                full_ref = f"ostree-unverified-registry:{img.full_ref}"
+            else:
+                full_ref = f"ostree-image-signed:docker://{img.full_ref}"
+            
+            rebase_button.connect("clicked",
+                                lambda b, ref=full_ref, name=f"{clean_name} {img.tag}": 
+                                self.on_rebase_clicked(ref, name))
+            row.add_suffix(rebase_button)
+            
+            self.history_list.append(row)
+    
+    def _show_historical_error(self, error_msg):
+        """Show error in historical list"""
+        # Clear existing
+        child = self.history_list.get_first_child()
+        while child:
+            next_child = child.get_next_sibling()
+            self.history_list.remove(child)
+            child = next_child
+        
+        error_row = Adw.ActionRow()
+        error_row.set_title("Failed to load historical images")
+        error_row.set_subtitle(f"Error: {error_msg}")
+        error_row.add_css_class("error")
+        self.history_list.append(error_row)
+    
+    def _extract_image_name(self, origin):
+        """Extract a clean image name from the origin URL"""
+        if "ghcr.io/ublue-os/" in origin:
+            parts = origin.split("/")
+            if len(parts) >= 3:
+                image_tag = parts[-1]
+                image_name = image_tag.split(":")[0]
+                # Clean up the name
+                image_name = image_name.replace("-", " ").title()
+                return image_name
+        elif "quay.io/fedora/" in origin:
+            parts = origin.split("/")
+            if len(parts) >= 3:
+                image_tag = parts[-1]
+                image_name = image_tag.split(":")[0]
+                # Clean up Fedora names
+                image_name = image_name.replace("fedora-", "").replace("-", " ").title()
+                return f"Fedora {image_name}"
+        
+        # Fallback: just show the last part of the origin
+        return origin.split("/")[-1]
+    
+    def refresh_rollback_deployments(self):
+        """Refresh just the rollback deployments"""
+        self.refresh_system_status()
+    
+    def on_historical_rollback_clicked(self, deployment):
+        """Handle rollback for historical deployments"""
+        # For historical deployments, we need to use the deployment ID
+        # This would require enhancing the command executor to support
+        # rpm-ostree deploy <commit-id>
+        dialog = ConfirmationDialog(
+            self,
+            "Restore Historical Deployment?",
+            f"This will restore your system to:\n{deployment.origin}\n"
+            f"Version: {deployment.version}\n"
+            f"Deployed: {deployment.timestamp}\n\n"
+            "This is an advanced operation. Continue?",
+            "Restore"
+        )
+        
+        if dialog.run():
+            self.show_error("Historical rollback not yet implemented")
+            # TODO: Implement historical rollback using deployment.id
+    
+    def on_pin_deployment(self, deployment):
+        """Handle pinning a deployment"""
+        dialog = ConfirmationDialog(
+            self,
+            "Pin Deployment?",
+            f"This will pin the deployment:\n{self._extract_image_name(deployment.origin)}\n\n"
+            "Pinned deployments are protected from automatic cleanup.",
+            "Pin"
+        )
+        
+        if dialog.run():
+            # Execute pin command
+            try:
+                if 'FLATPAK_ID' in os.environ:
+                    cmd = ["flatpak-spawn", "--host", "pkexec", "ostree", "admin", "pin", str(deployment.index)]
+                else:
+                    cmd = ["pkexec", "ostree", "admin", "pin", str(deployment.index)]
+                
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                
+                if result.returncode == 0:
+                    self.show_success("Deployment pinned successfully")
+                    self.refresh_system_status()
+                else:
+                    self.show_error(f"Failed to pin deployment: {result.stderr}")
+            except Exception as e:
+                self.show_error(f"Error pinning deployment: {str(e)}")
+    
+    def on_unpin_deployment(self, deployment):
+        """Handle unpinning a deployment"""
+        dialog = ConfirmationDialog(
+            self,
+            "Unpin Deployment?",
+            f"This will unpin the deployment:\n{self._extract_image_name(deployment.origin)}\n\n"
+            "The deployment will no longer be protected from automatic cleanup.",
+            "Unpin"
+        )
+        
+        if dialog.run():
+            # Execute unpin command
+            try:
+                if 'FLATPAK_ID' in os.environ:
+                    cmd = ["flatpak-spawn", "--host", "pkexec", "ostree", "admin", "pin", "--unpin", str(deployment.index)]
+                else:
+                    cmd = ["pkexec", "ostree", "admin", "pin", "--unpin", str(deployment.index)]
+                
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                
+                if result.returncode == 0:
+                    self.show_success("Deployment unpinned successfully")
+                    self.refresh_system_status()
+                else:
+                    self.show_error(f"Failed to unpin deployment: {result.stderr}")
+            except Exception as e:
+                self.show_error(f"Error unpinning deployment: {str(e)}")
+    
+    def on_history_search_changed(self, search_entry):
+        """Handle search text changes in historical deployments"""
+        # Invalidate filter to trigger re-filtering
+        self.history_list.invalidate_filter()
+    
+    def history_filter_func(self, row):
+        """Filter function for historical deployments search"""
+        search_text = self.history_search_entry.get_text().lower()
+        
+        if not search_text:
+            return True
+        
+        # Get the row's title and subtitle
+        if hasattr(row, 'get_title'):
+            title = row.get_title() or ""
+            subtitle = row.get_subtitle() or ""
+            
+            # Search in both title and subtitle
+            combined_text = f"{title} {subtitle}".lower()
+            
+            # Check if search text matches
+            return search_text in combined_text
+        
+        return True
             
     def update_history_list(self):
         """Update history list"""
@@ -552,14 +993,14 @@ class AtomicImageWindow(Adw.ApplicationWindow):
             full_name = f"{base_name} {display_suffix}"
         else:
             full_name = f"{base_name}{variant_suffix}" if variant_suffix else base_name
-        # For Fedora atomic, suffix includes the tag (e.g., :latest, :40)
-        # For Universal Blue, we need to add :latest
+        # For Fedora atomic, suffix includes the tag (e.g., :40, :41)
+        # For Universal Blue, we need to add :stable for variants without explicit tags
         if variant_suffix and variant_suffix.startswith(':'):
             # Fedora atomic style - suffix includes the tag
             image_url = f"{variant_dropdown.base_url}{variant_suffix}"
         else:
-            # Universal Blue style - add :latest
-            image_url = f"{variant_dropdown.base_url}{variant_suffix}:latest"
+            # Universal Blue style - add :stable as the default
+            image_url = f"{variant_dropdown.base_url}{variant_suffix}:stable"
         
         # Show confirmation with full variant name
         dialog = ConfirmationDialog(
@@ -704,6 +1145,32 @@ class AtomicImageWindow(Adw.ApplicationWindow):
                 update_progress_from_log(line)
             except Exception as e:
                 print(f"Error appending log line: {e}")
+        
+        # Now that append_log_line is defined, we can set up the cancel button
+        def on_cancel_clicked(button):
+            """Handle cancel button click"""
+            append_log_line("\n=== Cancelling operation ===")
+            button.set_sensitive(False)
+            
+            # Cancel the current command execution
+            self.command_executor.cancel_current_execution()
+            
+            # Also run rpm-ostree cancel to cancel the transaction
+            try:
+                subprocess.run(["flatpak-spawn", "--host", "rpm-ostree", "cancel"], 
+                             capture_output=True, text=True)
+                append_log_line("Operation cancelled by user")
+            except Exception as e:
+                append_log_line(f"Error during cancel: {e}")
+            
+            cancel_button.set_visible(False)
+            close_button.set_visible(True)
+            progress_bar.set_text("Cancelled")
+            status_label.set_markup("<b>Operation cancelled</b>")
+        
+        # Connect the cancel button handler and enable it
+        cancel_button.connect("clicked", on_cancel_clicked)
+        cancel_button.set_sensitive(True)
         
         def do_rebase():
             try:
@@ -880,6 +1347,34 @@ class AtomicImageWindow(Adw.ApplicationWindow):
             elif "complete" in line.lower():
                 progress_bar.set_fraction(0.9)
         
+        # Connect cancel button handler after append_log_line is defined
+        def on_cancel_clicked(button):
+            """Handle cancel button click"""
+            append_log_line("\n=== Cancelling operation ===")
+            button.set_sensitive(False)
+            
+            # Cancel the current command execution
+            self.command_executor.cancel_current_execution()
+            
+            # Also run rpm-ostree cancel to cancel the transaction
+            try:
+                subprocess.run(["flatpak-spawn", "--host", "rpm-ostree", "cancel"], 
+                             capture_output=True, text=True)
+                append_log_line("Operation cancelled by user")
+            except Exception as e:
+                append_log_line(f"Error during cancel: {e}")
+            
+            # Update UI
+            progress_bar.set_fraction(0)
+            progress_bar.set_text("Cancelled")
+            status_label.set_markup("<b>Operation cancelled</b>")
+            cancel_button.set_visible(False)
+            close_button.set_visible(True)
+            close_button.add_css_class("suggested-action")
+        
+        cancel_button.connect("clicked", on_cancel_clicked)
+        cancel_button.set_sensitive(True)  # Enable cancel button
+        
         def do_rollback():
             try:
                 # Initial log
@@ -887,7 +1382,10 @@ class AtomicImageWindow(Adw.ApplicationWindow):
                 GLib.idle_add(append_log_line, "")
                 
                 # Execute with progress callback
-                result = self.command_executor.execute_rollback(deployment_index, append_log_line)
+                def thread_safe_callback(line):
+                    GLib.idle_add(append_log_line, line)
+                
+                result = self.command_executor.execute_rollback(deployment_index, thread_safe_callback)
                 
                 if result['success']:
                     GLib.idle_add(progress_bar.set_fraction, 1.0)
@@ -922,7 +1420,7 @@ class AtomicImageWindow(Adw.ApplicationWindow):
             finally:
                 GLib.idle_add(self.refresh_system_status)
                 
-        thread = threading.Thread(target=do_rollback)
+        thread = threading.Thread(target=do_rollback, daemon=True)
         thread.start()
         
     def show_success(self, message):

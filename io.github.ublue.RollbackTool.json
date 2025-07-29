@@ -1,0 +1,75 @@
+{
+  "app-id": "io.github.ublue.RollbackTool",
+  "runtime": "org.gnome.Platform",
+  "runtime-version": "47",
+  "sdk": "org.gnome.Sdk",
+  "command": "atomic-rollback-tool",
+  "finish-args": [
+    "--share=ipc",
+    "--socket=fallback-x11",
+    "--socket=wayland", 
+    "--device=dri",
+    "--filesystem=host-os:ro",
+    "--filesystem=host-etc:ro",
+    "--filesystem=/run/host/etc:ro",
+    "--filesystem=/var/log:ro",
+    "--filesystem=/proc:ro",
+    "--filesystem=/sys:ro",
+    "--filesystem=/usr/bin/rpm-ostree:ro",
+    "--filesystem=/usr/libexec/rpm-ostree:ro",
+    "--talk-name=org.freedesktop.systemd1",
+    "--talk-name=org.freedesktop.login1",
+    "--talk-name=org.projectatomic.rpmostree1",
+    "--talk-name=org.freedesktop.portal.Desktop",
+    "--talk-name=org.freedesktop.portal.NetworkMonitor",
+    "--talk-name=org.freedesktop.portal.MemoryMonitor", 
+    "--talk-name=org.freedesktop.portal.Settings",
+    "--talk-name=org.freedesktop.portal.Flatpak",
+    "--talk-name=org.freedesktop.Flatpak",
+    "--talk-name=org.freedesktop.PolicyKit1",
+    "--system-talk-name=org.freedesktop.PolicyKit1",
+    "--share=network"
+  ],
+  "modules": [
+    {
+      "name": "python3-modules",
+      "buildsystem": "simple",
+      "build-commands": [
+        "pip3 install --verbose --prefix=/app --no-deps ."
+      ],
+      "sources": [
+        {
+          "type": "shell",
+          "commands": [
+            "echo 'from setuptools import setup; setup(name=\"placeholder\")' > setup.py"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "atomic-rollback-tool",
+      "buildsystem": "simple",
+      "build-commands": [
+        "install -Dm755 rollback-app/src/atomic-rollback-tool.py /app/bin/atomic-rollback-tool",
+        "install -Dm755 rollback-app/src/deployment_manager.py /app/lib/python3.12/site-packages/deployment_manager.py",
+        "install -Dm755 rollback-app/src/registry_manager.py /app/lib/python3.12/site-packages/registry_manager.py",
+        "install -Dm755 rollback-app/src/command_executor.py /app/lib/python3.12/site-packages/command_executor.py",
+        "install -Dm755 rollback-app/src/rpm_ostree_helper.py /app/lib/python3.12/site-packages/rpm_ostree_helper.py",
+        "mkdir -p /app/lib/python3.12/site-packages/ui",
+        "install -Dm755 rollback-app/src/ui/__init__.py /app/lib/python3.12/site-packages/ui/__init__.py",
+        "install -Dm755 rollback-app/src/ui/confirmation_dialog.py /app/lib/python3.12/site-packages/ui/confirmation_dialog.py",
+        "install -Dm755 rollback-app/src/ui/simple_confirmation_dialog.py /app/lib/python3.12/site-packages/ui/simple_confirmation_dialog.py",
+        "install -Dm644 rollback-app/data/atomic-rollback-tool.desktop /app/share/applications/io.github.ublue.RollbackTool.desktop",
+        "install -Dm644 rollback-app/data/icons/io.github.ublue.RollbackTool.svg /app/share/icons/hicolor/scalable/apps/io.github.ublue.RollbackTool.svg",
+        "install -Dm644 rollback-app/data/metainfo/io.github.ublue.RollbackTool.metainfo.xml /app/share/metainfo/io.github.ublue.RollbackTool.metainfo.xml",
+        "sed -i '1s|.*|#!/usr/bin/env python3|' /app/bin/atomic-rollback-tool"
+      ],
+      "sources": [
+        {
+          "type": "dir",
+          "path": "."
+        }
+      ]
+    }
+  ]
+}

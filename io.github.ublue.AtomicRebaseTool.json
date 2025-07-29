@@ -1,0 +1,74 @@
+{
+  "app-id": "io.github.ublue.AtomicRebaseTool",
+  "runtime": "org.gnome.Platform",
+  "runtime-version": "47",
+  "sdk": "org.gnome.Sdk",
+  "command": "atomic-rebase-tool",
+  "finish-args": [
+    "--share=ipc",
+    "--socket=fallback-x11",
+    "--socket=wayland", 
+    "--device=dri",
+    "--filesystem=host-os:ro",
+    "--filesystem=host-etc:ro",
+    "--filesystem=/run/host/etc:ro",
+    "--filesystem=/var/log:ro",
+    "--filesystem=/proc:ro",
+    "--filesystem=/sys:ro",
+    "--filesystem=/usr/bin/rpm-ostree:ro",
+    "--filesystem=/usr/libexec/rpm-ostree:ro",
+    "--talk-name=org.freedesktop.systemd1",
+    "--talk-name=org.freedesktop.login1",
+    "--talk-name=org.projectatomic.rpmostree1",
+    "--talk-name=org.freedesktop.portal.Desktop",
+    "--talk-name=org.freedesktop.portal.NetworkMonitor",
+    "--talk-name=org.freedesktop.portal.MemoryMonitor", 
+    "--talk-name=org.freedesktop.portal.Settings",
+    "--talk-name=org.freedesktop.portal.Flatpak",
+    "--talk-name=org.freedesktop.Flatpak",
+    "--talk-name=org.freedesktop.PolicyKit1",
+    "--system-talk-name=org.freedesktop.PolicyKit1",
+    "--share=network"
+  ],
+  "modules": [
+    {
+      "name": "python3-modules",
+      "buildsystem": "simple",
+      "build-commands": [
+        "pip3 install --verbose --prefix=/app --no-deps ."
+      ],
+      "sources": [
+        {
+          "type": "shell",
+          "commands": [
+            "echo 'from setuptools import setup; setup(name=\"placeholder\")' > setup.py"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "atomic-rebase-tool",
+      "buildsystem": "simple",
+      "build-commands": [
+        "install -Dm755 rebase-app/src/atomic-rebase-tool.py /app/bin/atomic-rebase-tool",
+        "install -Dm755 rebase-app/src/deployment_manager.py /app/lib/python3.12/site-packages/deployment_manager.py",
+        "install -Dm755 rebase-app/src/command_executor.py /app/lib/python3.12/site-packages/command_executor.py",
+        "install -Dm755 rebase-app/src/rpm_ostree_helper.py /app/lib/python3.12/site-packages/rpm_ostree_helper.py",
+        "mkdir -p /app/lib/python3.12/site-packages/ui",
+        "install -Dm755 rebase-app/src/ui/__init__.py /app/lib/python3.12/site-packages/ui/__init__.py",
+        "install -Dm755 rebase-app/src/ui/confirmation_dialog.py /app/lib/python3.12/site-packages/ui/confirmation_dialog.py",
+        "install -Dm755 rebase-app/src/ui/simple_confirmation_dialog.py /app/lib/python3.12/site-packages/ui/simple_confirmation_dialog.py",
+        "install -Dm644 rebase-app/data/atomic-rebase-tool.desktop /app/share/applications/io.github.ublue.AtomicRebaseTool.desktop",
+        "install -Dm644 rebase-app/data/icons/io.github.ublue.AtomicRebaseTool.svg /app/share/icons/hicolor/scalable/apps/io.github.ublue.AtomicRebaseTool.svg",
+        "install -Dm644 rebase-app/data/metainfo/io.github.ublue.AtomicRebaseTool.metainfo.xml /app/share/metainfo/io.github.ublue.AtomicRebaseTool.metainfo.xml",
+        "sed -i '1s|.*|#!/usr/bin/env python3|' /app/bin/atomic-rebase-tool"
+      ],
+      "sources": [
+        {
+          "type": "dir",
+          "path": "."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Atomic Rollback Tool
+Comment=Manage and rollback ostree deployments
+Exec=atomic-rollback-tool
+Terminal=false
+Type=Application
+Icon=io.github.ublue.RollbackTool
+Categories=System;Settings;
+Keywords=rollback;ostree;deployment;atomic;immutable;

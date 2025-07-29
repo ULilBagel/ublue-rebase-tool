@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Atomic Rebase Tool
+Comment=Rebase to different ostree images
+Exec=atomic-rebase-tool
+Terminal=false
+Type=Application
+Icon=io.github.ublue.AtomicRebaseTool
+Categories=System;Settings;
+Keywords=rebase;ostree;image;atomic;immutable;universal-blue;

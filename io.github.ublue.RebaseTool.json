@@ -27,7 +27,8 @@
     "--talk-name=org.freedesktop.portal.Flatpak",
     "--talk-name=org.freedesktop.Flatpak",
     "--talk-name=org.freedesktop.PolicyKit1",
-    "--system-talk-name=org.freedesktop.PolicyKit1"
+    "--system-talk-name=org.freedesktop.PolicyKit1",
+    "--share=network"
   ],
   "modules": [
     {
@@ -57,6 +58,7 @@
         "install -Dm755 src/progress_tracker.py /app/lib/python3.12/site-packages/progress_tracker.py",
         "install -Dm755 src/history_manager.py /app/lib/python3.12/site-packages/history_manager.py",
         "install -Dm755 src/rpm_ostree_helper.py /app/lib/python3.12/site-packages/rpm_ostree_helper.py",
+        "install -Dm755 src/registry_manager.py /app/lib/python3.12/site-packages/registry_manager.py",
         "mkdir -p /app/lib/python3.12/site-packages/ui",
         "install -Dm755 src/ui/__init__.py /app/lib/python3.12/site-packages/ui/__init__.py",
         "install -Dm755 src/ui/confirmation_dialog.py /app/lib/python3.12/site-packages/ui/confirmation_dialog.py",

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Atomic OS Manager
+Comment=Configure your atomic OS with image-specific options
+Exec=atomic-os-manager
+Terminal=false
+Type=Application
+Icon=io.github.ublue.OSManager
+Categories=System;Settings;
+Keywords=ostree;atomic;immutable;gamemode;gpu;bazzite;bluefin;aurora;

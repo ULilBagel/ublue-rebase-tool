@@ -1,0 +1,29 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e3c72;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2a5298;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="iconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4ecdc4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#44a08d;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <circle cx="64" cy="64" r="60" fill="url(#bgGradient)" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
+  <rect x="20" y="24" width="88" height="64" rx="12" fill="url(#iconGradient)" opacity="0.9"/>
+  <rect x="28" y="32" width="72" height="40" rx="4" fill="rgba(30,60,114,0.8)"/>
+  <rect x="32" y="36" width="24" height="3" rx="1.5" fill="#ff6b6b"/>
+  <rect x="32" y="42" width="40" height="3" rx="1.5" fill="rgba(255,255,255,0.8)"/>
+  <rect x="32" y="48" width="32" height="3" rx="1.5" fill="rgba(255,255,255,0.6)"/>
+  <rect x="32" y="54" width="48" height="3" rx="1.5" fill="rgba(255,255,255,0.4)"/>
+  
+  <!-- Rebase arrows -->
+  <path d="M 36 96 L 52 96 L 52 88 L 64 100 L 52 112 L 52 104 L 36 104 Z" fill="#4ecdc4"/>
+  <path d="M 92 96 L 76 96 L 76 88 L 64 100 L 76 112 L 76 104 L 92 104 Z" fill="rgba(255,255,255,0.8)"/>
+  
+  <!-- Universal Blue dots -->
+  <circle cx="88" cy="40" r="4" fill="#4ecdc4"/>
+  <circle cx="96" cy="48" r="3" fill="rgba(78,205,196,0.7)"/>
+  <circle cx="104" cy="56" r="2" fill="rgba(78,205,196,0.5)"/>
+</svg>

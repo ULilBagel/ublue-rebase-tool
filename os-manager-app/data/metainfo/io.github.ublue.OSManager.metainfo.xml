@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.ublue.OSManager</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Atomic OS Manager</name>
+  <summary>Configure your atomic OS with image-specific options</summary>
+  
+  <description>
+    <p>
+      Atomic OS Manager is an intelligent configuration tool that automatically detects
+      your current atomic OS image and provides tailored configuration options specific
+      to that image. It simplifies the process of switching between variants and
+      managing image-specific features.
+    </p>
+    <p>Image-specific features:</p>
+    <ul>
+      <li>Bazzite: Game Mode toggle, GPU selection (AMD/NVIDIA/Intel), branch selection</li>
+      <li>Bluefin/Aurora: Developer Experience (DX) mode, GPU selection, branch selection</li>
+      <li>Fedora Silverblue/Kinoite: Branch selection (stable/rawhide)</li>
+    </ul>
+    <p>General features:</p>
+    <ul>
+      <li>Automatic detection of current image and configuration</li>
+      <li>Smart URL generation based on selected options</li>
+      <li>Safe operation with confirmation dialogs</li>
+      <li>Single "Apply" button to execute all changes</li>
+    </ul>
+  </description>
+  
+  <launchable type="desktop-id">io.github.ublue.OSManager.desktop</launchable>
+  
+  <screenshots>
+    <screenshot type="default">
+      <caption>Configuration options for your atomic OS</caption>
+    </screenshot>
+  </screenshots>
+  
+  <url type="homepage">https://github.com/ublue-os</url>
+  <url type="bugtracker">https://github.com/ublue-os/ublue-rebase-tool/issues</url>
+  
+  <developer id="io.github.ublue">
+    <name>Universal Blue</name>
+  </developer>
+  
+  <releases>
+    <release version="1.0.0" date="2024-01-29">
+      <description>
+        <p>Initial release of Atomic OS Manager</p>
+        <ul>
+          <li>Support for Bazzite gaming configurations</li>
+          <li>Support for Bluefin/Aurora developer configurations</li>
+          <li>Support for Fedora Silverblue/Kinoite</li>
+          <li>Automatic image detection</li>
+          <li>Smart configuration options based on current image</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+  
+  <content_rating type="oars-1.1" />
+  
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+  
+  <recommends>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </recommends>
+</component>

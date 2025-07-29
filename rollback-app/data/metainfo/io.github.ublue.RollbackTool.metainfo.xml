@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.ublue.RollbackTool</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Atomic Rollback Tool</name>
+  <summary>Manage and rollback ostree deployments</summary>
+  
+  <description>
+    <p>
+      Atomic Rollback Tool is a specialized utility for managing ostree-based system deployments.
+      It provides an easy-to-use interface for rolling back to previous deployments, pinning
+      deployments to prevent cleanup, and restoring historical deployments from container registries.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>View all system deployments with clear status indicators</li>
+      <li>Rollback to previous deployments with one click</li>
+      <li>Pin deployments to protect them from automatic cleanup</li>
+      <li>Search and restore deployments from the last 90 days</li>
+      <li>Support for Universal Blue and Fedora atomic systems</li>
+    </ul>
+  </description>
+  
+  <launchable type="desktop-id">io.github.ublue.RollbackTool.desktop</launchable>
+  
+  <screenshots>
+    <screenshot type="default">
+      <caption>Main rollback interface</caption>
+    </screenshot>
+  </screenshots>
+  
+  <url type="homepage">https://github.com/ublue-os</url>
+  <url type="bugtracker">https://github.com/ublue-os/ublue-rebase-tool/issues</url>
+  
+  <developer id="io.github.ublue">
+    <name>Universal Blue</name>
+  </developer>
+  
+  <releases>
+    <release version="1.0.0" date="2024-01-29">
+      <description>
+        <p>Initial release of standalone Atomic Rollback Tool</p>
+        <ul>
+          <li>Extracted from Atomic Image Manager</li>
+          <li>Full deployment management capabilities</li>
+          <li>Historical deployment restoration</li>
+          <li>Pin/unpin functionality</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+  
+  <content_rating type="oars-1.1" />
+  
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+  
+  <recommends>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </recommends>
+</component>

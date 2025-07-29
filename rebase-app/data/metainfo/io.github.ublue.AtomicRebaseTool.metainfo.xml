@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.ublue.AtomicRebaseTool</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Atomic Rebase Tool</name>
+  <summary>Rebase to different ostree images</summary>
+  
+  <description>
+    <p>
+      Atomic Rebase Tool is a specialized utility for rebasing ostree-based systems
+      to different atomic images. It provides an easy-to-use interface for switching
+      between different Universal Blue and Fedora atomic desktop variants.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Quick selection of popular atomic images (Silverblue, Kinoite, Bazzite, etc.)</li>
+      <li>Support for different variants (NVIDIA, Developer editions, etc.)</li>
+      <li>Custom image URL support for advanced users</li>
+      <li>Real-time progress tracking with detailed logs</li>
+      <li>Safe operation with confirmation dialogs</li>
+    </ul>
+  </description>
+  
+  <launchable type="desktop-id">io.github.ublue.AtomicRebaseTool.desktop</launchable>
+  
+  <screenshots>
+    <screenshot type="default">
+      <caption>Image selection interface</caption>
+    </screenshot>
+  </screenshots>
+  
+  <url type="homepage">https://github.com/ublue-os</url>
+  <url type="bugtracker">https://github.com/ublue-os/ublue-rebase-tool/issues</url>
+  
+  <developer id="io.github.ublue">
+    <name>Universal Blue</name>
+  </developer>
+  
+  <releases>
+    <release version="1.0.0" date="2024-01-29">
+      <description>
+        <p>Initial release of standalone Atomic Rebase Tool</p>
+        <ul>
+          <li>Extracted from Atomic Image Manager</li>
+          <li>Support for all major Universal Blue images</li>
+          <li>Support for Fedora Silverblue and Kinoite</li>
+          <li>Custom image URL support</li>
+          <li>Real-time progress tracking</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+  
+  <content_rating type="oars-1.1" />
+  
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+  
+  <recommends>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </recommends>
+</component>

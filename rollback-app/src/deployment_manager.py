@@ -1,0 +1,291 @@
+#!/usr/bin/env python3
+"""
+DeploymentManager service for rpm-ostree deployments
+Extends existing rpm-ostree status parsing with full deployment management
+"""
+
+import json
+import subprocess
+from dataclasses import dataclass
+from typing import List, Optional, Dict, Any
+from datetime import datetime
+
+
+@dataclass
+class Deployment:
+    """Data class representing an rpm-ostree deployment"""
+    id: str              # Deployment checksum
+    origin: str          # Image URL
+    version: str         # OS version
+    timestamp: str       # Deployment date
+    is_booted: bool      # Currently active
+    is_pinned: bool      # Pinned status
+    index: int           # Deployment index
+    image_name: str      # Parsed image name (e.g., "Bluefin")
+    
+    @classmethod
+    def from_json(cls, data: Dict[str, Any], index: int) -> 'Deployment':
+        """Create Deployment from rpm-ostree JSON data"""
+        # Parse timestamp if available
+        timestamp_str = "Unknown"
+        if 'timestamp' in data:
+            try:
+                ts = datetime.fromtimestamp(data['timestamp'])
+                timestamp_str = ts.strftime("%Y-%m-%d %H:%M:%S")
+            except:
+                timestamp_str = str(data['timestamp'])
+        
+        # Extract version from multiple possible locations
+        version = data.get('version', '')
+        if not version and 'base-commit-meta' in data:
+            # Try to get version from base-commit-meta
+            base_meta = data['base-commit-meta']
+            version = base_meta.get('version', '')
+            if not version:
+                # Try fedora.version-display or fedora.version
+                version = base_meta.get('fedora.version-display', base_meta.get('fedora.version', ''))
+        
+        # Parse origin to get clean image info
+        origin = data.get('origin', 'Unknown')
+        container_ref = data.get('container-image-reference', '')
+        
+        # Use container-image-reference if available, otherwise parse origin
+        if container_ref:
+            # Extract just the URL part from ostree-image-signed:docker://...
+            if 'docker://' in container_ref:
+                origin = container_ref.split('docker://')[-1]
+            else:
+                origin = container_ref
+        elif isinstance(origin, str) and 'refspec=ostree-image-signed:docker://' in origin:
+            # Extract the docker URL from origin
+            origin = origin.split('docker://')[-1]
+        
+        # Extract image name for the image_name field
+        image_name = "Unknown"
+        if 'ghcr.io/ublue-os/' in origin:
+            parts = origin.split('/')
+            if len(parts) >= 3:
+                image_tag = parts[-1]  # e.g., "bluefin-dx:latest"
+                image_base = image_tag.split(':')[0]  # e.g., "bluefin-dx"
+                # Remove suffixes and capitalize
+                image_name = image_base.replace('-dx', '').replace('-nvidia', '').replace('-asus', '').replace('-gnome', '').replace('-deck', '').title()
+        
+        return cls(
+            id=data.get('checksum', '')[:12],  # Use first 12 chars for display
+            origin=origin,
+            version=version,
+            timestamp=timestamp_str,
+            is_booted=data.get('booted', False),
+            is_pinned=data.get('pinned', False),
+            index=index,
+            image_name=image_name
+        )
+
+
+class DeploymentManager:
+    """Service to parse and manage rpm-ostree deployment information"""
+    
+    def __init__(self):
+        self._deployments_cache: Optional[List[Deployment]] = None
+        self._last_status_json: Optional[Dict[str, Any]] = None
+    
+    def get_all_deployments(self) -> List[Deployment]:
+        """
+        Return list of all available deployments
+        
+        Returns:
+            List of Deployment objects, empty list if rpm-ostree unavailable
+        """
+        try:
+            # Import helper for flatpak environment
+            try:
+                from rpm_ostree_helper import get_status_json
+                status_data = get_status_json()
+                if status_data:
+                    self._last_status_json = status_data
+                else:
+                    # Fallback to direct subprocess
+                    result = subprocess.run(
+                        ['rpm-ostree', 'status', '--json'],
+                        capture_output=True,
+                        text=True,
+                        timeout=5
+                    )
+                    
+                    if result.returncode == 0:
+                        status_data = json.loads(result.stdout)
+                        self._last_status_json = status_data
+                    else:
+                        return []
+            except ImportError:
+                # Not in flatpak, use direct subprocess
+                result = subprocess.run(
+                    ['rpm-ostree', 'status', '--json'],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                
+                if result.returncode == 0:
+                    status_data = json.loads(result.stdout)
+                    self._last_status_json = status_data
+                else:
+                    return []
+            
+            # Extract deployments
+            deployments = []
+            raw_deployments = status_data.get('deployments', [])
+            
+            for idx, deployment_data in enumerate(raw_deployments):
+                deployment = Deployment.from_json(deployment_data, idx)
+                deployments.append(deployment)
+            
+            self._deployments_cache = deployments
+            return deployments
+            
+        except (subprocess.TimeoutExpired, FileNotFoundError, json.JSONDecodeError):
+            # Return empty list if rpm-ostree unavailable
+            return []
+    
+    def get_current_deployment(self) -> Optional[Deployment]:
+        """
+        Get the currently booted deployment
+        
+        Returns:
+            Current Deployment or None if not found
+        """
+        deployments = self.get_all_deployments()
+        for deployment in deployments:
+            if deployment.is_booted:
+                return deployment
+        return None
+    
+    def format_deployment_info(self, deployment: Deployment) -> Dict[str, str]:
+        """
+        Format deployment information for display
+        
+        Args:
+            deployment: Deployment to format
+            
+        Returns:
+            Dictionary with formatted display strings
+        """
+        info = {
+            'title': f"Deployment {deployment.index + 1}",
+            'id': deployment.id,
+            'origin': deployment.origin,
+            'version': deployment.version,
+            'timestamp': deployment.timestamp,
+            'status': []
+        }
+        
+        # Add status badges
+        if deployment.is_booted:
+            info['status'].append('Currently Booted')
+        if deployment.is_pinned:
+            info['status'].append('Pinned')
+        
+        # Extract image name from origin
+        if 'ublue-os/' in deployment.origin:
+            image_parts = deployment.origin.split('/')
+            if len(image_parts) >= 2:
+                image_name = image_parts[-1].split(':')[0]
+                info['image_name'] = f"Universal Blue - {image_name.title()}"
+            else:
+                info['image_name'] = "Universal Blue Image"
+        else:
+            info['image_name'] = deployment.origin.split('/')[-1]
+        
+        return info
+    
+    def generate_rollback_command(self, deployment_id: str) -> Optional[List[str]]:
+        """
+        Generate the appropriate rollback command for a deployment
+        
+        Args:
+            deployment_id: Deployment checksum ID (can be partial)
+            
+        Returns:
+            Command as list of arguments or None if deployment not found
+        """
+        deployments = self.get_all_deployments()
+        
+        # Find matching deployment
+        target_deployment = None
+        for deployment in deployments:
+            if deployment.id.startswith(deployment_id) or deployment.id == deployment_id:
+                target_deployment = deployment
+                break
+        
+        if not target_deployment:
+            return None
+        
+        # Don't rollback to current deployment
+        if target_deployment.is_booted:
+            return None
+        
+        # If it's the previous deployment (index 1), use simple rollback
+        if target_deployment.index == 1:
+            return ["rpm-ostree", "rollback"]
+        
+        # Otherwise, use deploy with specific commit
+        return ["rpm-ostree", "deploy", target_deployment.id]
+    
+    def _get_demo_deployments(self) -> List[Deployment]:
+        """Get demo deployment data for testing"""
+        return [
+            Deployment(
+                id="demo12345678",
+                origin="ghcr.io/ublue-os/bluefin:latest",
+                version="40.20240715.0",
+                timestamp="2024-07-15 10:30:00",
+                is_booted=True,
+                is_pinned=False,
+                index=0
+            ),
+            Deployment(
+                id="demo87654321",
+                origin="ghcr.io/ublue-os/aurora:latest",
+                version="40.20240710.0",
+                timestamp="2024-07-10 14:20:00",
+                is_booted=False,
+                is_pinned=False,
+                index=1
+            ),
+            Deployment(
+                id="demo11223344",
+                origin="ghcr.io/ublue-os/bazzite:stable",
+                version="40.20240705.0",
+                timestamp="2024-07-05 09:15:00",
+                is_booted=False,
+                is_pinned=True,
+                index=2
+            )
+        ]
+    
+    def validate_deployment_selection(self, deployment_id: str) -> tuple[bool, Optional[str]]:
+        """
+        Validate that a deployment can be selected for rollback
+        
+        Args:
+            deployment_id: Deployment ID to validate
+            
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        deployments = self.get_all_deployments()
+        
+        # Find deployment
+        target = None
+        for d in deployments:
+            if d.id.startswith(deployment_id):
+                target = d
+                break
+        
+        if not target:
+            return False, "Deployment not found"
+        
+        if target.is_booted:
+            return False, "Cannot rollback to currently booted deployment"
+        
+        return True, None
