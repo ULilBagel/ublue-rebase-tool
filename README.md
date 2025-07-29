@@ -1,77 +1,144 @@
-# Atomic Image Manager
+# Atomic Tools Suite
 
-A GTK4 application for managing atomic/ostree systems. Easily rebase between Fedora Silverblue, Kinoite, and Universal Blue images with live progress tracking.
+A collection of specialized GTK4 applications for managing atomic/ostree systems. Each tool focuses on a specific aspect of system management with an intuitive, modern interface.
 
-## Features
+## 🛠️ The Tools
 
-- **Supported Systems**: 
-  - Fedora Silverblue & Kinoite (versions 40, 41, Latest, Rawhide)
-  - Universal Blue: Bazzite, Bluefin, Aurora (all variants)
-- **Live Progress**: Real-time command output during operations
-- **Safe Operations**: Confirmation dialogs and rollback capabilities
-- **Native GTK4**: Modern libadwaita interface with variant selection
+### 🔄 Atomic Rollback Tool
+**Purpose**: Manage and restore system deployments with enhanced rollback capabilities
 
-## Installation
+- View all system deployments with clear status indicators
+- One-click rollback to any previous deployment
+- Pin important deployments to prevent automatic cleanup
+- Search and restore deployments from the last 90 days
+- Similar functionality to bazzite-rollback-helper
 
-### Option 1: Download Release
+### 🔀 Atomic Rebase Tool  
+**Purpose**: Switch between different atomic OS images with ease
+
+- Quick selection of popular images (Silverblue, Kinoite, Bazzite, Bluefin, Aurora)
+- Support for all variants (NVIDIA, Developer editions, etc.)
+- Custom image URL support for advanced users
+- Automatic cleanup before rebasing to prevent errors
+- Real-time progress tracking with detailed logs
+
+### ⚙️ Atomic OS Manager
+**Purpose**: Configure your system based on the current image with smart, contextual options
+
+- Automatically detects your current OS image
+- Provides image-specific configuration options:
+  - **Bazzite**: Game mode toggle, GPU selection, branch selection
+  - **Bluefin/Aurora**: Developer Experience (DX) mode, GPU options
+  - **All Universal Blue**: System update integration with reboot prompts
+- Single "Apply" button to execute all changes
+- Smart UI that adapts to your system's capabilities
+
+## 📥 Installation
+
+### Download Release
 ```bash
-wget https://github.com/ULilBagel/ublue-rebase-tool/releases/latest/download/io.github.ublue.RebaseTool.flatpak
-flatpak install --user io.github.ublue.RebaseTool.flatpak
+# Download all three tools from the latest release
+wget https://github.com/ULilBagel/ublue-rebase-tool/releases/latest/download/io.github.ublue.RollbackTool.flatpak
+wget https://github.com/ULilBagel/ublue-rebase-tool/releases/latest/download/io.github.ublue.AtomicRebaseTool.flatpak
+wget https://github.com/ULilBagel/ublue-rebase-tool/releases/latest/download/io.github.ublue.OSManager.flatpak
+
+# Install the tools you need
+flatpak install --user io.github.ublue.RollbackTool.flatpak
+flatpak install --user io.github.ublue.AtomicRebaseTool.flatpak
+flatpak install --user io.github.ublue.OSManager.flatpak
 ```
 
-### Option 2: Build from Source
+### Build from Source
 ```bash
 # Prerequisites
 flatpak install flathub org.gnome.Platform//47 org.gnome.Sdk//47
 
-# Build
+# Clone and build
 git clone https://github.com/ULilBagel/ublue-rebase-tool.git
 cd ublue-rebase-tool
-flatpak run org.flatpak.Builder --force-clean --user --install build-dir io.github.ublue.RebaseTool.json
+
+# Build all tools
+./build-all.sh
+
+# Or build individually
+./build-rollback.sh
+./build-rebase.sh
+./build-os-manager.sh
 ```
 
-## Usage
+## 🚀 Usage
 
+### Rollback Tool
 ```bash
-flatpak run io.github.ublue.RebaseTool
+flatpak run io.github.ublue.RollbackTool
 ```
+Use when you need to revert system changes or restore a previous working state.
 
-- **Rebase Tab**: Select an image and variant, click "Rebase"
-- **Rollback Tab**: View deployment history, click "Rollback" on any previous deployment
+### Rebase Tool
+```bash
+flatpak run io.github.ublue.AtomicRebaseTool
+```
+Use when switching to a different atomic OS variant or distribution.
 
-## Screenshots
+### OS Manager
+```bash
+flatpak run io.github.ublue.OSManager
+```
+Use to configure image-specific features and manage system updates.
 
-![Main Window](main-window.png)
-![Progress Dialog](progress-diag.png)
+## 📸 Screenshots
 
-## Requirements
+![Rollback Tool](screenshots/rollback-tool.png)
+*Atomic Rollback Tool - Managing system deployments*
 
-- Atomic/ostree-based system (Fedora Silverblue, Kinoite, or Universal Blue)
+![Rebase Tool](screenshots/rebase-tool.png)
+*Atomic Rebase Tool - Switching OS images*
+
+![OS Manager](screenshots/os-manager.png)
+*Atomic OS Manager - Image-specific configuration*
+
+## 🔧 Requirements
+
+- Atomic/ostree-based system:
+  - Fedora Silverblue or Kinoite
+  - Universal Blue variants (Bazzite, Bluefin, Aurora)
+  - Any other ostree-based system
 - Flatpak runtime
 - GNOME 47 runtime
 
-## Security & Permissions
+## 🔒 Security & Permissions
 
-The application runs sandboxed with minimal permissions:
-- **Read-only access**: Host OS information and system files
-- **D-Bus access**: rpm-ostree and Flatpak portals for system operations
-- **Display access**: Wayland and X11 support
-- **No network access**: Completely offline operation
+All tools run sandboxed with minimal required permissions:
 
-Key permissions:
-- `--filesystem=host-os:ro` - Read OS information
-- `--talk-name=org.projectatomic.rpmostree1` - rpm-ostree operations
-- `--talk-name=org.freedesktop.Flatpak` - Execute commands via flatpak-spawn
+- **Read-only access**: System information and configuration files
+- **System operations**: Via D-Bus to rpm-ostree and systemd
+- **No network access**: All operations are local
+- **User confirmation**: All system modifications require explicit approval
 
-All system modifications require explicit user confirmation.
+## 📋 Supported Systems
 
-## License
+### Fedora Atomic
+- Silverblue (GNOME)
+- Kinoite (KDE)
+- Versions: 40, 41, Latest, Rawhide
+
+### Universal Blue
+- **Bazzite**: Gaming-focused with Steam Deck variants
+- **Bluefin**: Developer-focused GNOME experience
+- **Aurora**: Developer-focused KDE experience
+- All variants: Standard, NVIDIA, Developer Experience (DX)
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit issues or pull requests.
+
+## 📄 License
 
 GPL-3.0 - See [LICENSE](LICENSE) file for details
 
-## Acknowledgments
+## 🙏 Acknowledgments
 
-- [Universal Blue](https://universal-blue.org/) team for the amazing OS images
+- [Universal Blue](https://universal-blue.org/) team for the innovative OS images
 - [Fedora Project](https://fedoraproject.org/) for Silverblue and Kinoite
 - [GNOME](https://gnome.org/) project for GTK4 and libadwaita
-- [Flatpak](https://flatpak.org/) team for the packaging system
+- [Flatpak](https://flatpak.org/) team for the sandboxing technology
