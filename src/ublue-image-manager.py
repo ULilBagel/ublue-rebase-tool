@@ -40,7 +40,8 @@ class UBlueImageAPI:
         """Execute JavaScript in webview with error handling"""
         if self.webview:
             try:
-                self.webview.evaluate_javascript(script, -1, None, None, None, None, None)
+                # evaluate_javascript was removed from WebKitGTK 4.0; use run_javascript
+                self.webview.run_javascript(script, None, None, None)
             except Exception as e:
                 print(f"JavaScript execution error: {e}")
     

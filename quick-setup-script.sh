@@ -34,7 +34,8 @@ class UBlueRebaseAPI:
     def execute_js(self, script):
         """Execute JavaScript in the webview"""
         if self.webview:
-            self.webview.evaluate_javascript(script, -1, None, None, None, None, None)
+            # evaluate_javascript is deprecated; use run_javascript for modern WebKit
+            self.webview.run_javascript(script, None, None, None)
     
     def get_system_status(self):
         """Get current system status using rpm-ostree"""
