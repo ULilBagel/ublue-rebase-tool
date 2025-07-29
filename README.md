@@ -77,7 +77,7 @@ flatpak install --user io.github.ublue.RebaseTool.flatpak
 ![Main Window](main-window.png)
 *Main application window showing current deployment and available images*
 
-![Progress Dialog](process-diag.png)
+![Progress Dialog](progress-diag.png)
 *Live progress tracking during rebase operation*
 
 ## 🏗️ Architecture
