@@ -1,187 +1,212 @@
-# Universal Blue Image Manager
+# Universal Blue Rebase Tool
 
-A modern GTK4/libadwaita application for managing Universal Blue custom images, built following Universal Blue development best practices and community standards.
+A native GTK4/libadwaita application for managing Universal Blue system deployments with full rpm-ostree integration. Allows easy rebasing between Universal Blue variants and rollback to previous deployments.
 
-## 🎯 Universal Blue Best Practices Implementation
+## ✨ Features
 
-This application demonstrates complete compliance with Universal Blue development standards:
+### Core Functionality
+- **Native GTK4 Interface** - Pure GTK4/libadwaita application (no WebKit dependencies)
+- **Direct System Integration** - Full rpm-ostree integration via flatpak-spawn
+- **Live Progress Tracking** - Real-time command output during rebase/rollback operations
+- **Variant Selection** - Dropdown menus for all Universal Blue image variants
+- **90-Day History** - Access to full Universal Blue deployment history
+- **Safe Operations** - Confirmation dialogs for all system modifications
 
-### Architecture Compliance
-- ✅ **Directory Structure**: Proper UB-compliant structure (`src/`, `data/`, `docs/`, `tests/`)
-- ✅ **libadwaita Integration**: Modern GTK4/libadwaita widgets (AdwApplicationWindow, AdwHeaderBar, AdwToastOverlay)
-- ✅ **Portal-First Security**: XDG Desktop Portal integration with minimal permissions
-- ✅ **Guidance Pattern**: Follows UB guidance approach instead of direct system modification
+### Supported Images & Variants
+- **Bazzite** - Gaming-focused image
+  - Default, GNOME, Deck, DX, NVIDIA, AMD variants
+- **Bluefin** - Developer-focused image
+  - Default, DX, NVIDIA, DX NVIDIA variants
+- **Aurora** - KDE Plasma desktop
+  - Default, DX, NVIDIA, DX NVIDIA variants
 
-### Security Model
-- ✅ **Read-only Filesystem**: `--filesystem=host-os:ro` instead of full host access
-- ✅ **Portal Integration**: Uses portals before requesting specific permissions  
-- ✅ **No Direct Modification**: Provides instructions rather than direct rpm-ostree calls
-- ✅ **Flatpak Sandbox**: Proper isolation with minimal privilege escalation
-
-### Development Standards
-- ✅ **GitHub Actions CI/CD**: Official flatpak-github-actions workflow
-- ✅ **Comprehensive Testing**: Multi-level test suite validation
-- ✅ **Community Standards**: Follows UB code style and practices
-- ✅ **Container-First Development**: Supports Distrobox workflows
-
-## 🚀 Features
-
-- **Real System Integration** - Direct rpm-ostree status monitoring via D-Bus
-- **Guidance-Based Operations** - Follows UB patterns for safe system management  
-- **Modern libadwaita Interface** - Adaptive design with proper HIG compliance
-- **Portal-Based Security** - Uses XDG Desktop Portals following UB standards
-- **Universal Blue Optimized** - Built specifically for UB image variants
-- **Hybrid GTK/WebKit UI** - Best of both native and web technologies
+### Technical Features
+- ✅ **Flatpak Sandboxing** - Proper isolation with host system access
+- ✅ **Thread-Safe Updates** - All UI operations in main thread
+- ✅ **Error Recovery** - Comprehensive error handling
+- ✅ **GNOME 47 Runtime** - Latest GNOME platform
+- ✅ **Full Container References** - Shows complete image URLs (e.g., `ghcr.io/ublue-os/bluefin-dx:latest`)
 
 ## 🛠️ Quick Start
 
 ### Prerequisites
 ```bash
-# On Ubuntu/Debian
-sudo apt install flatpak flatpak-builder python3-gi python3-gi-cairo \
-                 gir1.2-gtk-4.0 gir1.2-adwaita-1 gir1.2-webkit-6.0
+# Install Flatpak and Flatpak Builder
+sudo apt install flatpak flatpak-builder  # Ubuntu/Debian
+sudo dnf install flatpak flatpak-builder  # Fedora
 
-# Add Flathub
+# Add Flathub repository
 flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
-# Install GNOME Platform 46
-flatpak install flathub org.gnome.Platform//46 org.gnome.Sdk//46
+# Install GNOME Runtime and SDK
+flatpak install flathub org.gnome.Platform//47 org.gnome.Sdk//47
 ```
 
 ### Build and Install
 ```bash
-# Run comprehensive tests
-./test.sh
+# Clone the repository
+git clone https://github.com/ULilBagel/ublue-rebase-tool.git
+cd ublue-rebase-tool
 
-# Build Flatpak
-./build.sh
+# Build and install the Flatpak
+flatpak run org.flatpak.Builder --force-clean --user --install --install-deps-from=flathub build-dir io.github.ublue.RebaseTool.json
 
-# Run application
+# Run the application
 flatpak run io.github.ublue.RebaseTool
 ```
 
+### Alternative: Use Pre-built Release
+```bash
+# Download the latest release flatpak
+wget https://github.com/ULilBagel/ublue-rebase-tool/releases/latest/download/io.github.ublue.RebaseTool.flatpak
+
+# Install it
+flatpak install --user io.github.ublue.RebaseTool.flatpak
+```
+
+## 📸 Screenshots
+
+![Main Window](docs/screenshots/main-window.png)
+*Main application window showing current deployment and available images*
+
+![Progress Dialog](docs/screenshots/progress-dialog.png)
+*Live progress tracking during rebase operation*
+
 ## 🏗️ Architecture
 
-### Universal Blue Directory Structure
+### Application Structure
 ```
-src/                    # Application source code
-├── portal/            # XDG Desktop Portal integration
-├── dbus/              # D-Bus service communication  
-├── ui/                # GTK4/libadwaita interface components
-├── monitoring/        # System monitoring and status display
-├── config/            # Configuration management
-└── utils/             # Utility functions and helpers
+src/
+├── ublue-image-manager.py    # Main application entry point
+├── command_executor.py       # Secure command execution service
+├── deployment_manager.py     # rpm-ostree deployment parsing
+├── rpm_ostree_helper.py      # Flatpak-spawn integration
+├── history_manager.py        # Deployment history tracking
+├── progress_tracker.py       # Operation progress monitoring
+└── ui/                       # User interface components
+    ├── simple_confirmation_dialog.py
+    └── confirmation_dialog.py
 
-data/                  # Application data
-├── web/               # Web interface for hybrid UI
-├── icons/             # Application icons
-└── metainfo/          # AppStream metadata
+data/
+├── icons/                    # Application icons
+├── metainfo/                # AppStream metadata
+└── web/                     # Legacy web assets
 
-docs/                  # Documentation
-tests/                 # Test suite
-.github/workflows/     # CI/CD automation
-```
-
-### Technology Stack
-- **GTK4 + libadwaita** - Modern GNOME application framework
-- **WebKit** - Hybrid web interface (included in GNOME Platform)
-- **Python 3** - Application logic and system integration
-- **XDG Desktop Portals** - Secure system operation interfaces
-- **rpm-ostree D-Bus** - System status monitoring
-- **Flatpak** - Sandboxed application packaging
-
-### Universal Blue Integration
-
-#### Supported Image Variants
-- **Bluefin** - Developer-focused GNOME desktop (`ghcr.io/ublue-os/bluefin:latest`)
-- **Aurora** - Polished KDE Plasma experience (`ghcr.io/ublue-os/aurora:latest`)
-- **Bazzite** - Gaming-optimized desktop (`ghcr.io/ublue-os/bazzite:latest`)
-- **Silverblue** - Clean GNOME base (`ghcr.io/ublue-os/silverblue-main:latest`)
-
-#### Guidance Pattern Implementation
-Following Universal Blue best practices, this application provides guidance rather than direct system modification:
-
-1. **System Status Monitoring** - Real-time rpm-ostree status via D-Bus
-2. **Instruction Generation** - Provides step-by-step terminal commands
-3. **Safety Validation** - Warns about operations requiring privileges
-4. **User Empowerment** - Educates users about their system
-
-## 🧪 Testing
-
-The application includes comprehensive testing:
-
-```bash
-# Run full test suite
-./test.sh
-
-# Test specific components
-python3 -c "
-import sys
-sys.path.insert(0, 'src')
-import gi
-gi.require_version('Gtk', '4.0')
-gi.require_version('Adw', '1')
-from gi.repository import Gtk, Adw
-print('✅ GTK4/libadwaita integration working')
-"
-
-# Validate manifest
-python3 -c "import json; print('✅ Manifest valid:', json.load(open('io.github.ublue.RebaseTool.json'))['app-id'])"
+io.github.ublue.RebaseTool.json  # Flatpak manifest
 ```
 
-## 🤝 Contributing
+### Key Components
 
-This project follows Universal Blue community standards:
+#### Command Execution
+- **flatpak-spawn** - Executes rpm-ostree commands on host system
+- **Thread-safe callbacks** - Progress updates in main GTK thread
+- **Live output streaming** - Real-time command output display
 
-1. **Brutal Scope Management** - Reject unnecessary complexity
-2. **Automation First** - Leverage GitHub Actions extensively  
-3. **Long-term Sustainability** - Focus on maintainable solutions
-4. **Community Integration** - Engage with Universal Blue maintainers
+#### Deployment Management
+- **JSON parsing** - Parses rpm-ostree status output
+- **Container references** - Extracts full image URLs
+- **History tracking** - Maintains deployment history
 
-### Development Environment
-```bash
-# Create development container (recommended)
-distrobox create --name gui-dev --image fedora:latest
-distrobox enter gui-dev
-sudo dnf install -y gtk4-devel libadwaita-devel meson ninja-build
-```
+#### User Interface
+- **AdwApplicationWindow** - Main application window
+- **AdwPreferencesGroup** - Settings and deployment groups
+- **AdwToastOverlay** - User notifications
+- **Gtk.TextView** - Live log output display
 
-## 📋 Implementation Details
+## 🔒 Security & Permissions
 
-### Flatpak Permissions (UB-Compliant)
+### Flatpak Permissions
 ```json
 {
   "finish-args": [
+    "--filesystem=/run/host/etc:ro",     // Read host OS information
     "--filesystem=host-os:ro",           // Read-only OS access
-    "--filesystem=host-etc:ro",          // Read-only config access
-    "--talk-name=org.projectatomic.rpmostree1",  // rpm-ostree D-Bus
-    "--talk-name=org.freedesktop.portal.Desktop" // Portal access
+    "--talk-name=org.freedesktop.Flatpak", // Execute commands on host
+    "--talk-name=org.freedesktop.PolicyKit1", // Authentication dialogs
+    "--socket=wayland",                  // Wayland display
+    "--socket=fallback-x11",            // X11 fallback
+    "--device=dri"                      // GPU acceleration
   ]
 }
 ```
 
-### Security Model
-- **Flatpak Sandbox**: Base isolation layer
-- **Portal Authentication**: Flows for system operations
-- **Permission Validation**: Before executing system commands
-- **User Confirmation**: For sensitive operations
-- **Audit Logging**: For security-relevant actions
+### Security Features
+- **Sandboxed Execution** - Runs in Flatpak sandbox
+- **Host Isolation** - Uses flatpak-spawn for host commands
+- **Read-Only Access** - No direct filesystem modifications
+- **User Confirmation** - All operations require explicit confirmation
 
-## 📚 Documentation
+## 🧪 Usage
 
-- [Universal Blue Development Guide](https://universal-blue.org/guide/)
-- [GTK4 Documentation](https://docs.gtk.org/gtk4/)
-- [libadwaita Documentation](https://gnome.pages.gitlab.gnome.org/libadwaita/)
-- [Flatpak Documentation](https://docs.flatpak.org/)
+### Main Window
+The main window displays your current deployment and provides two tabs:
+
+1. **Rebase Tab**
+   - Select from available Universal Blue images
+   - Choose specific variants via dropdown
+   - Click "Rebase" to switch images
+
+2. **Rollback Tab**
+   - View all available deployments
+   - Shows full container references
+   - Click "Rollback" on any previous deployment
+
+### Progress Tracking
+During rebase/rollback operations:
+- Modal progress window appears
+- Live command output displayed
+- Progress bar shows operation status
+- Window remains open after completion
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+### Development Tips
+```bash
+# Run with debug output
+RUST_LOG=debug flatpak run io.github.ublue.RebaseTool
+
+# Test without rebuilding flatpak
+python3 src/ublue-image-manager.py
+
+# Monitor D-Bus activity
+dbus-monitor --system "interface='org.projectatomic.rpmostree1'"
+```
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**"Unsupported System" Error**
+- Ensure you're running on a Universal Blue system
+- Check that rpm-ostree is available
+
+**Operations Timing Out**
+- Large images may take several minutes to download
+- Check your internet connection
+- Monitor progress in the log output
+
+**Flatpak Errors**
+- Ensure GNOME 47 runtime is installed
+- Try `flatpak repair --user`
 
 ## 📄 License
 
-GPL-3.0+ - Following Universal Blue project standards
+GPL-3.0 - See [LICENSE](LICENSE) file for details
 
-## 🔗 Links
+## 🙏 Acknowledgments
 
-- [Universal Blue](https://github.com/universal-blue)
-- [Flatpak on Flathub](https://flathub.org/)
-- [GNOME Development](https://developer.gnome.org/)
+- [Universal Blue](https://universal-blue.org/) team for the amazing OS images
+- [GNOME](https://gnome.org/) project for GTK4 and libadwaita
+- [Flatpak](https://flatpak.org/) team for the packaging system
 
-Built with ❤️ for the Universal Blue community.
+---
+
+Built with ❤️ for the Universal Blue community
