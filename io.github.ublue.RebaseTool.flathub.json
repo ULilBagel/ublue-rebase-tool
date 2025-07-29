@@ -1,0 +1,59 @@
+{
+  "app-id": "io.github.ublue.RebaseTool",
+  "runtime": "org.gnome.Platform",
+  "runtime-version": "46",
+  "sdk": "org.gnome.Sdk",
+  "command": "ublue-image-manager",
+  "finish-args": [
+    "--share=ipc",
+    "--socket=fallback-x11",
+    "--socket=wayland", 
+    "--device=dri",
+    "--filesystem=host-os:ro",
+    "--filesystem=host-etc:ro",
+    "--filesystem=/var/log:ro",
+    "--filesystem=/proc:ro",
+    "--filesystem=/sys:ro",
+    "--talk-name=org.freedesktop.systemd1",
+    "--talk-name=org.freedesktop.login1",
+    "--talk-name=org.projectatomic.rpmostree1",
+    "--talk-name=org.freedesktop.portal.Desktop",
+    "--talk-name=org.freedesktop.portal.NetworkMonitor",
+    "--talk-name=org.freedesktop.portal.MemoryMonitor", 
+    "--talk-name=org.freedesktop.portal.Settings",
+    "--talk-name=org.freedesktop.portal.Flatpak",
+    "--talk-name=org.freedesktop.PolicyKit1",
+    "--system-talk-name=org.freedesktop.PolicyKit1"
+  ],
+  "modules": [
+    {
+      "name": "ublue-image-manager",
+      "buildsystem": "simple",
+      "build-commands": [
+        "install -Dm755 src/ublue-image-manager.py /app/bin/ublue-image-manager",
+        "install -Dm755 src/ublue_image_manager.py /app/lib/python3.11/site-packages/ublue_image_manager.py",
+        "install -Dm755 src/command_executor.py /app/lib/python3.11/site-packages/command_executor.py",
+        "install -Dm755 src/deployment_manager.py /app/lib/python3.11/site-packages/deployment_manager.py",
+        "install -Dm755 src/progress_tracker.py /app/lib/python3.11/site-packages/progress_tracker.py",
+        "install -Dm755 src/history_manager.py /app/lib/python3.11/site-packages/history_manager.py",
+        "mkdir -p /app/lib/python3.11/site-packages/ui",
+        "install -Dm755 src/ui/__init__.py /app/lib/python3.11/site-packages/ui/__init__.py",
+        "install -Dm755 src/ui/confirmation_dialog.py /app/lib/python3.11/site-packages/ui/confirmation_dialog.py",
+        "install -Dm644 data/ublue-image-manager.desktop /app/share/applications/io.github.ublue.RebaseTool.desktop",
+        "install -Dm644 data/icons/io.github.ublue.RebaseTool.svg /app/share/icons/hicolor/scalable/apps/io.github.ublue.RebaseTool.svg",
+        "install -Dm644 data/metainfo/io.github.ublue.RebaseTool.metainfo.xml /app/share/metainfo/io.github.ublue.RebaseTool.metainfo.xml",
+        "mkdir -p /app/share/ublue-image-manager",
+        "cp -r data/web/* /app/share/ublue-image-manager/",
+        "sed -i '1s|.*|#!/usr/bin/env python3|' /app/bin/ublue-image-manager"
+      ],
+      "sources": [
+        {
+          "type": "git",
+          "url": "https://github.com/ublue-os/ublue-rebase-tool.git",
+          "tag": "v1.0.0",
+          "commit": "COMMIT_SHA_HERE"
+        }
+      ]
+    }
+  ]
+}

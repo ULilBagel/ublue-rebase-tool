@@ -1,0 +1,1570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Blue Image Manager</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .panel {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .panel h2 {
+            font-size: 1.4em;
+            margin-bottom: 20px;
+            color: #4ecdc4;
+            display: flex;
+            align-items: center;
+        }
+        
+        .status-grid {
+            display: grid;
+            gap: 12px;
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+        }
+        
+        .status-value {
+            font-family: 'SF Mono', Consolas, monospace;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 4px;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .btn-warning {
+            background: linear-gradient(45deg, #ff9800, #f57c00);
+            color: white;
+        }
+        
+        .btn-info {
+            background: linear-gradient(45deg, #00bcd4, #0097a7);
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .btn:disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .warning {
+            background: rgba(255, 193, 7, 0.2);
+            border-left: 4px solid #ffc107;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 16px 0;
+        }
+        
+        .info {
+            background: rgba(78, 205, 196, 0.2);
+            border-left: 4px solid #4ecdc4;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 16px 0;
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .instructions ol {
+            margin-left: 20px;
+            margin-top: 12px;
+        }
+        
+        .instructions li {
+            margin: 8px 0;
+        }
+        
+        .command {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 12px;
+            border-radius: 6px;
+            font-family: 'SF Mono', Consolas, monospace;
+            margin: 12px 0;
+            word-break: break-all;
+        }
+        
+        .images-grid {
+            display: grid;
+            gap: 16px;
+            margin-top: 16px;
+        }
+        
+        .image-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .image-card h4 {
+            color: #4ecdc4;
+            margin-bottom: 8px;
+        }
+        
+        .image-card p {
+            margin-bottom: 8px;
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        .image-url {
+            font-family: 'SF Mono', Consolas, monospace;
+            font-size: 0.8em;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin: 8px 0;
+        }
+        
+        /* Deployment card styles */
+        .deployments-grid {
+            display: grid;
+            gap: 16px;
+            margin-top: 16px;
+        }
+        
+        .deployment-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+        
+        .deployment-card.booted {
+            border-color: #4ecdc4;
+            background: rgba(78, 205, 196, 0.1);
+        }
+        
+        .deployment-card.pinned {
+            border-left: 4px solid #ffc107;
+        }
+        
+        .deployment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+        
+        .deployment-title {
+            color: #4ecdc4;
+            font-size: 1.1em;
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .deployment-status {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+        }
+        
+        .status-badge {
+            font-size: 0.8em;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        
+        .status-badge.current {
+            background: rgba(78, 205, 196, 0.8);
+            color: #000;
+        }
+        
+        .status-badge.pinned {
+            background: rgba(255, 193, 7, 0.8);
+            color: #000;
+        }
+        
+        .deployment-info {
+            display: grid;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        
+        .deployment-detail {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9em;
+        }
+        
+        .deployment-detail .label {
+            opacity: 0.8;
+        }
+        
+        .deployment-detail .value {
+            font-family: 'SF Mono', Consolas, monospace;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+        
+        .deployment-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        /* History card styles */
+        .history-grid {
+            display: grid;
+            gap: 12px;
+            margin-top: 16px;
+        }
+        
+        .history-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+        
+        .history-card.success {
+            border-left: 4px solid #4ecdc4;
+        }
+        
+        .history-card.failed {
+            border-left: 4px solid #ff6b6b;
+        }
+        
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+        
+        .history-operation {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .history-type {
+            color: #4ecdc4;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+        
+        .history-status {
+            font-size: 0.8em;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        
+        .history-status.success {
+            background: rgba(78, 205, 196, 0.3);
+            color: #4ecdc4;
+        }
+        
+        .history-status.failed {
+            background: rgba(255, 107, 107, 0.3);
+            color: #ff6b6b;
+        }
+        
+        .history-time {
+            font-size: 0.85em;
+            opacity: 0.8;
+        }
+        
+        .history-command {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px;
+            border-radius: 8px;
+            font-family: 'SF Mono', Consolas, monospace;
+            font-size: 0.85em;
+            margin: 12px 0;
+            word-break: break-all;
+            position: relative;
+        }
+        
+        .history-command:hover {
+            background: rgba(0, 0, 0, 0.4);
+        }
+        
+        .history-image {
+            font-size: 0.9em;
+            margin-bottom: 8px;
+            opacity: 0.9;
+        }
+        
+        .history-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: 1fr; }
+            .header h1 { font-size: 2em; }
+            .panel { padding: 20px; }
+        }
+        
+        .hidden { display: none; }
+        
+        /* Progress tracking styles */
+        .progress-panel {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(78, 205, 196, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .progress-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .progress-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #4ecdc4;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .progress-output {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'SF Mono', Consolas, monospace;
+            font-size: 0.85em;
+            line-height: 1.4;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        .progress-line {
+            margin: 2px 0;
+            opacity: 0.9;
+        }
+        
+        .progress-line.new {
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 0.9; transform: translateY(0); }
+        }
+        
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        
+        .progress-complete {
+            background: rgba(78, 205, 196, 0.2);
+            border-color: #4ecdc4;
+        }
+        
+        .progress-failed {
+            background: rgba(255, 107, 107, 0.2);
+            border-color: #ff6b6b;
+        }
+        
+        .progress-time {
+            font-size: 0.85em;
+            opacity: 0.7;
+        }
+        
+        /* Enhanced mode banners */
+        .demo-mode-banner, .ublue-mode-banner, .warning-mode-banner {
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 12px;
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            backdrop-filter: blur(10px);
+        }
+        
+        .demo-mode-banner {
+            background: rgba(255, 183, 77, 0.2);
+            border: 2px solid rgba(255, 183, 77, 0.4);
+        }
+        
+        .ublue-mode-banner {
+            background: rgba(78, 205, 196, 0.2);
+            border: 2px solid rgba(78, 205, 196, 0.4);
+        }
+        
+        .warning-mode-banner {
+            background: rgba(255, 107, 107, 0.2);
+            border: 2px solid rgba(255, 107, 107, 0.4);
+        }
+        
+        .demo-icon, .ublue-icon, .warning-icon {
+            font-size: 2.5em;
+            line-height: 1;
+        }
+        
+        .demo-content h3, .ublue-content h3, .warning-content h3 {
+            margin: 0 0 8px 0;
+            font-size: 1.3em;
+            color: white;
+        }
+        
+        .demo-content p, .ublue-content p, .warning-content p {
+            margin: 4px 0;
+            opacity: 0.9;
+        }
+        
+        .demo-message {
+            color: #ffb74d;
+        }
+        
+        .demo-recommendation {
+            font-style: italic;
+            opacity: 0.8;
+        }
+        
+        .ublue-ready {
+            color: #4ecdc4;
+        }
+        
+        .warning-message {
+            color: #ff6b6b;
+        }
+        
+        /* Capabilities grid */
+        .capabilities-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin-top: 16px;
+        }
+        
+        .capability {
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        .capability.available {
+            background: rgba(78, 205, 196, 0.2);
+            color: #4ecdc4;
+        }
+        
+        .capability.unavailable {
+            background: rgba(255, 107, 107, 0.2);
+            color: #ff6b6b;
+        }
+        
+        /* System details */
+        .system-details {
+            margin-top: 16px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+        
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 4px 0;
+        }
+        
+        .detail-label {
+            opacity: 0.8;
+        }
+        
+        .detail-value {
+            font-weight: 600;
+            font-family: 'SF Mono', Consolas, monospace;
+        }
+        
+        /* Demo mode specific styles */
+        .demo-mode .btn-execute {
+            opacity: 0.5;
+            cursor: not-allowed;
+            position: relative;
+        }
+        
+        .demo-mode .btn-execute::after {
+            content: ' (Demo)';
+            font-size: 0.8em;
+            opacity: 0.8;
+        }
+        
+        .demo-warning-tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 183, 77, 0.9);
+            color: black;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            white-space: nowrap;
+            display: none;
+            margin-bottom: 8px;
+            z-index: 1000;
+        }
+        
+        .demo-mode .btn-execute:hover .demo-warning-tooltip {
+            display: block;
+        }
+        
+        /* Enhanced error message styles */
+        .error-panel {
+            border: 2px solid rgba(255, 107, 107, 0.4);
+            background: rgba(255, 107, 107, 0.1);
+        }
+        
+        .demo-error-message {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        
+        .error-icon {
+            font-size: 3em;
+            line-height: 1;
+        }
+        
+        .error-details h3 {
+            margin: 0 0 12px 0;
+            color: #ffb74d;
+            font-size: 1.2em;
+        }
+        
+        .error-main {
+            font-weight: 600;
+            margin: 8px 0;
+            color: #ff6b6b;
+        }
+        
+        .error-explanation {
+            opacity: 0.9;
+            margin: 8px 0;
+        }
+        
+        .error-suggestions {
+            margin-top: 16px;
+            padding: 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+        
+        .error-suggestions h4 {
+            margin: 0 0 8px 0;
+            color: #4ecdc4;
+            font-size: 1em;
+        }
+        
+        .error-suggestions ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .error-suggestions li {
+            margin: 4px 0;
+            opacity: 0.9;
+        }
+        
+        .error-suggestions a {
+            color: #4ecdc4;
+            text-decoration: none;
+        }
+        
+        .error-suggestions a:hover {
+            text-decoration: underline;
+        }
+        
+        .error-message {
+            padding: 16px;
+            background: rgba(255, 107, 107, 0.2);
+            border-radius: 8px;
+        }
+        
+        .error-message .error-main {
+            font-weight: 600;
+            color: #ff6b6b;
+        }
+        
+        .error-message .error-details {
+            margin-top: 8px;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Universal Blue Image Manager</h1>
+            <p>Modern libadwaita interface following Universal Blue best practices</p>
+            <div class="info">
+                <strong>Guidance Pattern:</strong> This application provides instructions and guidance rather than direct system modifications, following Universal Blue development standards.
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="panel">
+                <h2>📊 System Status</h2>
+                <div class="status-grid" id="systemStatus">
+                    <div class="status-item">
+                        <span>Current Image:</span>
+                        <span class="status-value" id="currentImage">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span>OS Version:</span>
+                        <span class="status-value" id="osVersion">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span>Deployment:</span>
+                        <span class="status-value" id="deploymentId">Loading...</span>
+                    </div>
+                </div>
+                <div style="margin-top: 16px;">
+                    <button class="btn btn-secondary" onclick="refreshStatus()">
+                        🔄 Refresh Status
+                    </button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>🎯 Quick Actions</h2>
+                <p>Explore available Universal Blue images and get guidance for system management.</p>
+                <div style="margin-top: 16px;">
+                    <button class="btn btn-primary" onclick="showAvailableImages()">
+                        📋 Show Available Images
+                    </button>
+                    <button class="btn btn-warning" onclick="showCustomRebase()">
+                        🔧 Custom Image URL
+                    </button>
+                    <button class="btn btn-secondary" onclick="showDeployments()">
+                        🔄 Show Deployments
+                    </button>
+                    <button class="btn btn-info" onclick="showHistory()">
+                        📜 Command History
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel hidden" id="instructionsPanel">
+            <h2>📋 Instructions</h2>
+            <div id="instructionsContent"></div>
+        </div>
+
+        <div class="panel hidden" id="imagesPanel">
+            <h2>🎯 Available Universal Blue Images</h2>
+            <div id="imagesContent"></div>
+        </div>
+
+        <div class="panel hidden" id="customPanel">
+            <h2>🔧 Custom Image Rebase</h2>
+            <p>Enter a custom image URL to get rebase instructions.</p>
+            <div style="margin: 16px 0;">
+                <input type="text" id="customImageUrl" placeholder="ghcr.io/ublue-os/your-image:latest"
+                       style="width: 100%; padding: 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white;">
+            </div>
+            <button class="btn btn-warning" onclick="guideCustomImage()">📋 Get Instructions</button>
+            <button class="btn btn-primary" onclick="executeCustomImage()">⚡ Execute Rebase</button>
+        </div>
+
+        <div class="panel hidden" id="deploymentsPanel">
+            <h2>🔄 System Deployments</h2>
+            <p>View and manage all available system deployments. You can rollback to any previous deployment.</p>
+            <div style="margin: 16px 0;">
+                <button class="btn btn-secondary" onclick="refreshDeployments()">
+                    🔄 Refresh Deployments
+                </button>
+            </div>
+            <div id="deploymentsContent">
+                <div class="info">Click "Refresh Deployments" to load available deployments.</div>
+            </div>
+        </div>
+
+        <div class="panel hidden" id="historyPanel">
+            <h2>📜 Command History</h2>
+            <p>View your command execution history with timestamps and results.</p>
+            <div style="margin: 16px 0;">
+                <button class="btn btn-secondary" onclick="refreshHistory()">
+                    🔄 Refresh History
+                </button>
+                <button class="btn btn-warning" onclick="clearHistory()">
+                    🗑️ Clear History
+                </button>
+            </div>
+            <div id="historyContent">
+                <div class="info">Click "Refresh History" to load command history.</div>
+            </div>
+        </div>
+
+        <div class="panel progress-panel hidden" id="progressPanel">
+            <div class="progress-header">
+                <h2>⚙️ Operation Progress</h2>
+                <div class="progress-status">
+                    <span class="progress-time" id="progressTime">00:00</span>
+                    <div class="progress-spinner hidden" id="progressSpinner"></div>
+                </div>
+            </div>
+            <div class="info" id="progressOperation">Initializing...</div>
+            <div class="progress-output" id="progressOutput">
+                <!-- Command output will appear here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API interaction functions
+        function updateSystemStatus(status) {
+            // Store current status for other functions to use
+            currentSystemStatus = status;
+            
+            document.getElementById('currentImage').textContent = status.currentImage;
+            document.getElementById('osVersion').textContent = status.osVersion;
+            document.getElementById('deploymentId').textContent = status.deploymentId;
+            
+            // Add enhanced status indicators
+            const statusDiv = document.getElementById('systemStatus');
+            const existingIndicators = statusDiv.querySelectorAll('.status-indicator, .demo-mode-banner, .ublue-mode-banner, .warning-mode-banner, .capabilities-grid');
+            existingIndicators.forEach(el => el.remove());
+            
+            let indicator = '';
+            let capabilities = '';
+            
+            if (status.type === 'demo') {
+                indicator = `
+                    <div class="demo-mode-banner">
+                        <div class="demo-icon">🔍</div>
+                        <div class="demo-content">
+                            <h3>Demo Mode Active</h3>
+                            <p>Running on: ${status.systemInfo?.actualSystem || 'Non-rpm-ostree system'}</p>
+                            <p class="demo-message">${status.systemInfo?.message || 'rpm-ostree not available'}</p>
+                            <p class="demo-recommendation">${status.systemInfo?.recommendation || ''}</p>
+                        </div>
+                    </div>
+                `;
+                
+                // Show capabilities status
+                capabilities = `
+                    <div class="capabilities-grid">
+                        <div class="capability ${status.capabilities?.hasPortalSupport ? 'available' : 'unavailable'}">
+                            ${status.capabilities?.hasPortalSupport ? '✓' : '✗'} Portal Support
+                        </div>
+                        <div class="capability ${status.capabilities?.hasPolkitSupport ? 'available' : 'unavailable'}">
+                            ${status.capabilities?.hasPolkitSupport ? '✓' : '✗'} Polkit Support
+                        </div>
+                        <div class="capability unavailable">✗ Rebase Support</div>
+                        <div class="capability unavailable">✗ Rollback Support</div>
+                    </div>
+                `;
+                
+                // Add demo mode class to body
+                document.body.classList.add('demo-mode');
+            } else if (status.isUniversalBlue) {
+                indicator = `
+                    <div class="ublue-mode-banner">
+                        <div class="ublue-icon">🚀</div>
+                        <div class="ublue-content">
+                            <h3>Universal Blue System</h3>
+                            <p>Variant: ${status.variant || 'Custom'}</p>
+                            <p class="ublue-ready">✅ Full functionality available</p>
+                        </div>
+                    </div>
+                `;
+                
+                // Show system details for real systems
+                if (status.systemInfo) {
+                    capabilities = `
+                        <div class="system-details">
+                            <div class="detail-item">
+                                <span class="detail-label">Layered Packages:</span>
+                                <span class="detail-value">${status.systemInfo.layeredPackages || 0}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Total Packages:</span>
+                                <span class="detail-value">${status.systemInfo.packages || 0}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                document.body.classList.remove('demo-mode');
+            } else {
+                indicator = `
+                    <div class="warning-mode-banner">
+                        <div class="warning-icon">⚠️</div>
+                        <div class="warning-content">
+                            <h3>Non-Universal Blue System</h3>
+                            <p>This is an rpm-ostree system but not Universal Blue</p>
+                            <p class="warning-message">Some features may not work as expected</p>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.classList.remove('demo-mode');
+            }
+            
+            statusDiv.innerHTML += indicator + capabilities;
+            
+            // Update current image indicators in the images list
+            updateCurrentImageIndicators();
+            
+            // Update execute buttons based on capabilities
+            if (status.type === 'demo') {
+                updateExecuteButtons(false);
+                showDemoModeWarnings();
+            } else {
+                updateExecuteButtons(true);
+            }
+        }
+        
+        function showRebaseInstructions(instructions) {
+            const panel = document.getElementById('instructionsPanel');
+            const content = document.getElementById('instructionsContent');
+            
+            content.innerHTML = `
+                <div class="warning">${instructions.safetyNote}</div>
+                <div class="instructions">
+                    <h3>${instructions.title}</h3>
+                    <ol>
+                        ${instructions.instructions.map(inst => `<li>${inst}</li>`).join('')}
+                    </ol>
+                    <div class="command">$ ${instructions.command}</div>
+                </div>
+            `;
+            
+            panel.classList.remove('hidden');
+            panel.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function showAvailableImages(result) {
+            if (!result) {
+                // Request images from API
+                window.ublueImageAPI.getAvailableImages();
+                return;
+            }
+            
+            const panel = document.getElementById('imagesPanel');
+            const content = document.getElementById('imagesContent');
+            
+            content.innerHTML = `
+                <div class="images-grid">
+                    ${result.images.map(image => `
+                        <div class="image-card" id="image-${encodeURIComponent(image.url)}">
+                            <h4>${image.name}</h4>
+                            <p>${image.description}</p>
+                            <div class="image-url">${image.url}</div>
+                            <div style="margin-top: 12px;">
+                                <button class="btn btn-warning" onclick="window.ublueImageAPI.guideRebase('${image.url}')">
+                                    📋 Get Instructions
+                                </button>
+                                <button class="btn btn-primary" onclick="executeRebase('${image.url}')" id="execute-${encodeURIComponent(image.url)}">
+                                    ⚡ Execute Rebase
+                                </button>
+                            </div>
+                            <div class="current-indicator hidden" id="current-${encodeURIComponent(image.url)}">
+                                <div class="info" style="margin-top: 8px; font-size: 0.9em;">
+                                    ✅ Currently Installed
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            panel.classList.remove('hidden');
+            panel.scrollIntoView({ behavior: 'smooth' });
+            
+            // Update current installation indicators
+            updateCurrentImageIndicators();
+        }
+        
+        // UI functions
+        function refreshStatus() {
+            window.ublueImageAPI.getSystemStatus();
+        }
+        
+        function showCustomRebase() {
+            const panel = document.getElementById('customPanel');
+            panel.classList.remove('hidden');
+            panel.scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('customImageUrl').focus();
+        }
+        
+        function guideCustomImage() {
+            const url = document.getElementById('customImageUrl').value.trim();
+            if (!url) {
+                alert('Please enter an image URL');
+                return;
+            }
+            window.ublueImageAPI.guideRebase(url);
+        }
+        
+        function executeRebase(imageUrl) {
+            // Call the new executeRebase API method
+            window.ublueImageAPI.executeRebase(imageUrl);
+        }
+        
+        function executeCustomImage() {
+            const url = document.getElementById('customImageUrl').value.trim();
+            if (!url) {
+                alert('Please enter an image URL');
+                return;
+            }
+            window.ublueImageAPI.executeRebase(url);
+        }
+        
+        function showExecutionError(errorData) {
+            // Display execution errors in a panel with enhanced messaging
+            let errorPanel = document.getElementById('errorPanel');
+            if (!errorPanel) {
+                // Create error panel if it doesn't exist
+                errorPanel = document.createElement('div');
+                errorPanel.id = 'errorPanel';
+                errorPanel.className = 'panel error-panel';
+                errorPanel.innerHTML = `
+                    <h2>❌ Execution Error</h2>
+                    <div id="errorContent"></div>
+                `;
+                document.querySelector('.container').appendChild(errorPanel);
+            }
+            
+            const content = document.getElementById('errorContent');
+            
+            // Check if this is a demo mode error
+            if (errorData.demo || errorData.error?.includes('demo mode')) {
+                content.innerHTML = `
+                    <div class="demo-error-message">
+                        <div class="error-icon">🔍</div>
+                        <div class="error-details">
+                            <h3>Demo Mode Restriction</h3>
+                            <p class="error-main">${errorData.error || 'This feature is not available in demo mode'}</p>
+                            <p class="error-explanation">${errorData.message || 'This tool requires a Universal Blue or rpm-ostree system for full functionality'}</p>
+                            <div class="error-suggestions">
+                                <h4>To use this feature:</h4>
+                                <ul>
+                                    <li>Install this tool on a Universal Blue system (Bluefin, Aurora, Bazzite)</li>
+                                    <li>Or use any rpm-ostree-based system (Fedora Silverblue, Kinoite)</li>
+                                    <li>Visit <a href="https://universal-blue.org" target="_blank">universal-blue.org</a> for more information</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Regular error display
+                content.innerHTML = `
+                    <div class="error-message">
+                        <p class="error-main">${errorData.error || 'An unknown error occurred'}</p>
+                        ${errorData.message ? `<p class="error-details">${errorData.message}</p>` : ''}
+                    </div>
+                `;
+            }
+            
+            errorPanel.classList.remove('hidden');
+            errorPanel.scrollIntoView({ behavior: 'smooth' });
+            
+            // Hide after 10 seconds
+            setTimeout(() => {
+                errorPanel.classList.add('hidden');
+            }, 10000);
+        }
+        
+        let currentSystemStatus = null;
+        
+        function updateCurrentImageIndicators() {
+            if (!currentSystemStatus) return;
+            
+            // Hide all current indicators first
+            document.querySelectorAll('.current-indicator').forEach(indicator => {
+                indicator.classList.add('hidden');
+            });
+            
+            // Show indicator for current image if it matches
+            const currentImageUrl = extractImageUrl(currentSystemStatus.currentImage);
+            if (currentImageUrl) {
+                const indicator = document.getElementById(`current-${encodeURIComponent(currentImageUrl)}`);
+                if (indicator) {
+                    indicator.classList.remove('hidden');
+                    
+                    // Also disable execute button for current image
+                    const executeBtn = document.getElementById(`execute-${encodeURIComponent(currentImageUrl)}`);
+                    if (executeBtn) {
+                        executeBtn.disabled = true;
+                        executeBtn.textContent = '✅ Currently Active';
+                        executeBtn.classList.remove('btn-primary');
+                        executeBtn.classList.add('btn-secondary');
+                    }
+                }
+            }
+        }
+        
+        function extractImageUrl(imageString) {
+            // Extract clean image URL from various formats
+            if (!imageString) return null;
+            
+            // Handle various formats like "ostree-image-signed:docker://ghcr.io/ublue-os/bluefin:latest"
+            const match = imageString.match(/(?:docker:\/\/)?([^:\s]+(?::[^:\s]+)?)$/);
+            return match ? match[1] : null;
+        }
+        
+        // Progress tracking functions
+        let progressStartTime = null;
+        let progressTimer = null;
+        
+        function initializeProgress(data) {
+            const panel = document.getElementById('progressPanel');
+            const operationDiv = document.getElementById('progressOperation');
+            const outputDiv = document.getElementById('progressOutput');
+            const spinner = document.getElementById('progressSpinner');
+            
+            // Reset state
+            panel.classList.remove('hidden', 'progress-complete', 'progress-failed');
+            spinner.classList.remove('hidden');
+            outputDiv.innerHTML = '';
+            operationDiv.textContent = `Executing: ${data.operation}`;
+            
+            // Start timer
+            progressStartTime = data.startTime * 1000; // Convert to milliseconds
+            updateProgressTime();
+            progressTimer = setInterval(updateProgressTime, 1000);
+            
+            // Show panel
+            panel.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function updateProgress(data) {
+            const outputDiv = document.getElementById('progressOutput');
+            
+            // Create new line element
+            const lineDiv = document.createElement('div');
+            lineDiv.className = 'progress-line new';
+            lineDiv.textContent = data.line;
+            
+            // Add to output
+            outputDiv.appendChild(lineDiv);
+            
+            // Auto-scroll to bottom
+            outputDiv.scrollTop = outputDiv.scrollHeight;
+            
+            // Remove animation class after animation completes
+            setTimeout(() => lineDiv.classList.remove('new'), 300);
+        }
+        
+        function completeProgress(data) {
+            const panel = document.getElementById('progressPanel');
+            const operationDiv = document.getElementById('progressOperation');
+            const spinner = document.getElementById('progressSpinner');
+            
+            // Stop timer
+            if (progressTimer) {
+                clearInterval(progressTimer);
+                progressTimer = null;
+            }
+            
+            // Hide spinner
+            spinner.classList.add('hidden');
+            
+            // Update status
+            if (data.success) {
+                panel.classList.add('progress-complete');
+                operationDiv.innerHTML = `✅ ${data.message}`;
+            } else {
+                panel.classList.add('progress-failed');
+                operationDiv.innerHTML = `❌ ${data.message}`;
+            }
+            
+            // Add summary
+            const outputDiv = document.getElementById('progressOutput');
+            const summaryDiv = document.createElement('div');
+            summaryDiv.style.marginTop = '16px';
+            summaryDiv.style.paddingTop = '16px';
+            summaryDiv.style.borderTop = '1px solid rgba(255, 255, 255, 0.2)';
+            summaryDiv.innerHTML = `
+                <strong>Operation Summary:</strong><br>
+                Duration: ${formatDuration(data.elapsedTime)}<br>
+                Lines processed: ${data.lineCount}
+            `;
+            outputDiv.appendChild(summaryDiv);
+        }
+        
+        function updateProgressTime() {
+            if (!progressStartTime) return;
+            
+            const elapsed = Date.now() - progressStartTime;
+            const timeDiv = document.getElementById('progressTime');
+            timeDiv.textContent = formatDuration(elapsed / 1000);
+        }
+        
+        function formatDuration(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+        
+        // Deployment management functions
+        function showDeployments() {
+            const panel = document.getElementById('deploymentsPanel');
+            panel.classList.remove('hidden');
+            panel.scrollIntoView({ behavior: 'smooth' });
+            
+            // Auto-refresh deployments when panel is shown
+            refreshDeployments();
+        }
+        
+        function refreshDeployments() {
+            // Call the API to get deployments
+            if (window.ublueImageAPI && window.ublueImageAPI.getDeployments) {
+                window.ublueImageAPI.getDeployments();
+            } else {
+                // Fallback for testing or if API is not ready
+                showDeploymentsResult({
+                    deployments: [],
+                    message: "API not available - this is demo mode"
+                });
+            }
+        }
+        
+        function showDeploymentsResult(result) {
+            const content = document.getElementById('deploymentsContent');
+            
+            if (!result.deployments || result.deployments.length === 0) {
+                content.innerHTML = `
+                    <div class="warning">
+                        <strong>No deployments found.</strong><br>
+                        ${result.message || 'Unable to retrieve deployment information from rpm-ostree.'}
+                    </div>
+                `;
+                return;
+            }
+            
+            content.innerHTML = `
+                <div class="deployments-grid">
+                    ${result.deployments.map((deployment, index) => createDeploymentCard(deployment, index)).join('')}
+                </div>
+            `;
+        }
+        
+        function createDeploymentCard(deployment, index) {
+            const cardClasses = ['deployment-card'];
+            if (deployment.is_booted) cardClasses.push('booted');
+            if (deployment.is_pinned) cardClasses.push('pinned');
+            
+            const statusBadges = [];
+            if (deployment.is_booted) {
+                statusBadges.push('<span class="status-badge current">✓ Current</span>');
+            }
+            if (deployment.is_pinned) {
+                statusBadges.push('<span class="status-badge pinned">📌 Pinned</span>');
+            }
+            
+            const rollbackButton = deployment.is_booted ? 
+                '<button class="btn btn-secondary" disabled>Currently Active</button>' :
+                `<button class="btn btn-warning" onclick="executeRollback('${deployment.id}', ${index})">🔄 Rollback to This</button>`;
+            
+            return `
+                <div class="${cardClasses.join(' ')}" id="deployment-${deployment.id}">
+                    <div class="deployment-header">
+                        <h3 class="deployment-title">Deployment ${index}</h3>
+                        <div class="deployment-status">
+                            ${statusBadges.join('')}
+                        </div>
+                    </div>
+                    <div class="deployment-info">
+                        <div class="deployment-detail">
+                            <span class="label">Origin:</span>
+                            <span class="value">${deployment.origin || 'Unknown'}</span>
+                        </div>
+                        <div class="deployment-detail">
+                            <span class="label">Version:</span>
+                            <span class="value">${deployment.version || 'Unknown'}</span>
+                        </div>
+                        <div class="deployment-detail">
+                            <span class="label">Timestamp:</span>
+                            <span class="value">${formatDeploymentTime(deployment.timestamp)}</span>
+                        </div>
+                        <div class="deployment-detail">
+                            <span class="label">ID:</span>
+                            <span class="value">${deployment.id.substring(0, 12)}...</span>
+                        </div>
+                    </div>
+                    <div class="deployment-actions">
+                        ${rollbackButton}
+                        <button class="btn btn-secondary" onclick="copyDeploymentId('${deployment.id}')">📋 Copy ID</button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function executeRollback(deploymentId, deploymentIndex) {
+            // Call the API to execute rollback
+            if (window.ublueImageAPI && window.ublueImageAPI.executeRollback) {
+                window.ublueImageAPI.executeRollback(deploymentId);
+            } else {
+                alert(`Demo mode: Would rollback to deployment ${deploymentIndex} (${deploymentId.substring(0, 12)}...)`);
+            }
+        }
+        
+        function copyDeploymentId(deploymentId) {
+            // Use the portal clipboard API if available
+            if (window.ublueImageAPI && window.ublueImageAPI.copyToClipboard) {
+                window.ublueImageAPI.copyToClipboard(deploymentId);
+            } else if (navigator.clipboard) {
+                navigator.clipboard.writeText(deploymentId).then(() => {
+                    showTemporaryMessage('Deployment ID copied to clipboard');
+                }).catch(() => {
+                    showTemporaryMessage('Failed to copy to clipboard');
+                });
+            } else {
+                // Fallback: show the ID in an alert
+                prompt('Deployment ID (copy manually):', deploymentId);
+            }
+        }
+        
+        function formatDeploymentTime(timestamp) {
+            if (!timestamp) return 'Unknown';
+            
+            try {
+                const date = new Date(timestamp);
+                return date.toLocaleString();
+            } catch (e) {
+                return timestamp;
+            }
+        }
+        
+        // Helper functions for demo mode
+        function updateExecuteButtons(enabled) {
+            // Update all execute buttons based on system capabilities
+            document.querySelectorAll('.btn-execute').forEach(button => {
+                if (!enabled) {
+                    button.disabled = true;
+                    // Add tooltip wrapper if not already present
+                    if (!button.querySelector('.demo-warning-tooltip')) {
+                        button.innerHTML += '<span class="demo-warning-tooltip">Execute feature disabled in demo mode</span>';
+                    }
+                } else {
+                    button.disabled = false;
+                    // Remove demo tooltip if present
+                    const tooltip = button.querySelector('.demo-warning-tooltip');
+                    if (tooltip) {
+                        tooltip.remove();
+                    }
+                }
+            });
+            
+            // Also update rollback buttons in deployments
+            document.querySelectorAll('.btn-rollback').forEach(button => {
+                button.disabled = !enabled;
+            });
+        }
+        
+        function showDemoModeWarnings() {
+            // Add warning to execute buttons
+            document.querySelectorAll('.btn-execute, .btn-rollback').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    if (currentSystemStatus && currentSystemStatus.type === 'demo') {
+                        e.preventDefault();
+                        showTemporaryMessage('This feature is disabled in demo mode. Install on a Universal Blue system for full functionality.');
+                    }
+                });
+            });
+        }
+        
+        function showTemporaryMessage(message) {
+            // Create a temporary toast-like message
+            const toast = document.createElement('div');
+            toast.className = 'temporary-message';
+            toast.textContent = message;
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                background: rgba(255, 183, 77, 0.9);
+                color: black;
+                padding: 16px 24px;
+                border-radius: 8px;
+                font-weight: 500;
+                z-index: 1000;
+                animation: fadeIn 0.3s ease;
+            `;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'fadeOut 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+        
+        // History management functions
+        function showHistory() {
+            const panel = document.getElementById('historyPanel');
+            panel.classList.remove('hidden');
+            panel.scrollIntoView({ behavior: 'smooth' });
+            refreshHistory();
+        }
+        
+        function refreshHistory() {
+            // Call the API to get history
+            if (window.ublueImageAPI && window.ublueImageAPI.getHistory) {
+                window.ublueImageAPI.getHistory();
+            } else {
+                // Fallback for testing or if API is not ready
+                showHistoryResult({
+                    success: true,
+                    history: []
+                });
+            }
+        }
+        
+        function clearHistory() {
+            if (confirm('Are you sure you want to clear all command history?')) {
+                if (window.ublueImageAPI && window.ublueImageAPI.clearHistory) {
+                    window.ublueImageAPI.clearHistory();
+                } else {
+                    showTemporaryMessage('History cleared (demo mode)');
+                }
+            }
+        }
+        
+        function showHistoryResult(result) {
+            const content = document.getElementById('historyContent');
+            
+            if (!result.history || result.history.length === 0) {
+                content.innerHTML = `
+                    <div class="info">
+                        No command history available yet. Execute some operations to see them here.
+                    </div>
+                `;
+                return;
+            }
+            
+            content.innerHTML = `
+                <div class="history-grid">
+                    ${result.history.map((entry, index) => createHistoryCard(entry, index)).join('')}
+                </div>
+            `;
+        }
+        
+        function createHistoryCard(entry, index) {
+            const cardClasses = ['history-card'];
+            cardClasses.push(entry.success ? 'success' : 'failed');
+            
+            const timestamp = new Date(entry.timestamp * 1000);
+            const timeString = timestamp.toLocaleString();
+            
+            return `
+                <div class="${cardClasses.join(' ')}">
+                    <div class="history-header">
+                        <div class="history-operation">
+                            <span class="history-type">${entry.operation_type}</span>
+                            <span class="history-status ${entry.success ? 'success' : 'failed'}">
+                                ${entry.success ? '✓ Success' : '✗ Failed'}
+                            </span>
+                        </div>
+                        <div class="history-time">${timeString}</div>
+                    </div>
+                    ${entry.image_name ? `<div class="history-image">Image: ${entry.image_name}</div>` : ''}
+                    <div class="history-command" onclick="copyHistoryCommand(${index})" title="Click to copy">
+                        ${escapeHtml(entry.command)}
+                    </div>
+                    <div class="history-actions">
+                        <button class="btn btn-secondary" onclick="copyHistoryCommand(${index})">
+                            📋 Copy Command
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function copyHistoryCommand(index) {
+            // This will be called from the UI with the history entry
+            if (window.historyData && window.historyData[index]) {
+                const command = window.historyData[index].command;
+                if (window.ublueImageAPI && window.ublueImageAPI.copyToClipboard) {
+                    window.ublueImageAPI.copyToClipboard(command);
+                } else if (navigator.clipboard) {
+                    navigator.clipboard.writeText(command).then(() => {
+                        showTemporaryMessage('Command copied to clipboard');
+                    }).catch(() => {
+                        showTemporaryMessage('Failed to copy to clipboard');
+                    });
+                } else {
+                    prompt('Command (copy manually):', command);
+                }
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Store history data globally for copy functionality
+        window.historyData = [];
+        
+        // Update the API result handler to include history
+        window.updateAPIResult = function(method, result) {
+            switch(method) {
+                case 'get_history':
+                    if (result.success && result.history) {
+                        window.historyData = result.history;
+                    }
+                    showHistoryResult(result);
+                    break;
+                case 'clear_history':
+                    if (result.success) {
+                        showTemporaryMessage('History cleared successfully');
+                        refreshHistory();
+                    } else {
+                        showTemporaryMessage('Failed to clear history');
+                    }
+                    break;
+                // ... existing cases ...
+            }
+        };
+        
+        function showTemporaryMessage(message) {
+            // Create a temporary toast-like message
+            const messageDiv = document.createElement('div');
+            messageDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: rgba(78, 205, 196, 0.9);
+                color: #000;
+                padding: 12px 20px;
+                border-radius: 8px;
+                font-weight: 600;
+                z-index: 1000;
+                animation: fadeIn 0.3s ease;
+            `;
+            messageDiv.textContent = message;
+            document.body.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.style.animation = 'fadeOut 0.3s ease';
+                setTimeout(() => messageDiv.remove(), 300);
+            }, 3000);
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load initial status
+            setTimeout(() => {
+                if (window.ublueImageAPI) {
+                    window.ublueImageAPI.getSystemStatus();
+                }
+            }, 500);
+        });
+    </script>
+</body>
+</html>
