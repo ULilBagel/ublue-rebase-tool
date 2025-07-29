@@ -2,17 +2,18 @@
 <component type="desktop-application">
   <id>io.github.ublue.RebaseTool</id>
   
-  <name>Universal Blue Image Manager</name>
-  <summary>Manage Universal Blue custom images on rpm-ostree systems</summary>
+  <name>Atomic Image Manager</name>
+  <summary>Manage atomic/ostree system images</summary>
   
   <description>
     <p>
-      Universal Blue Image Manager provides a modern graphical interface for managing 
-      Universal Blue custom images on rpm-ostree-based systems. It follows Universal Blue 
-      development best practices and provides a safe, guided experience for system image operations.
+      Atomic Image Manager provides a modern graphical interface for managing 
+      atomic/ostree-based system images. It supports Fedora Silverblue, Kinoite, 
+      and Universal Blue variants, providing a safe, guided experience for system image operations.
     </p>
     <p>
-      The application is designed for users of Universal Blue images (Bluefin, Aurora, Bazzite, etc.) 
+      The application is designed for users of atomic systems including Fedora Silverblue, 
+      Kinoite, and Universal Blue images (Bluefin, Aurora, Bazzite, etc.) 
       who want a user-friendly way to rebase between different image variants or rollback to 
       previous deployments.
     </p>
@@ -23,12 +24,12 @@
       <li>Deployment history and rollback capabilities</li>
       <li>Modern libadwaita interface with responsive design</li>
       <li>Comprehensive error handling and recovery guidance</li>
-      <li>Support for all Universal Blue image variants</li>
+      <li>Support for Fedora atomic and Universal Blue image variants</li>
       <li>Demo mode for non-ostree systems</li>
     </ul>
     <p>
-      The application requires an rpm-ostree-based system (like Fedora Silverblue or any 
-      Universal Blue image) for full functionality. On other systems, it runs in demo mode 
+      The application requires an rpm-ostree-based system (like Fedora Silverblue, Kinoite,
+      or any Universal Blue image) for full functionality. On other systems, it runs in demo mode 
       to showcase the interface and features.
     </p>
   </description>
@@ -86,7 +87,7 @@
     <keyword>ostree</keyword>
   </keywords>
   
-  <developer_name>Universal Blue Community</developer_name>
+  <developer_name>Atomic Image Manager Contributors</developer_name>
   <url type="homepage">https://github.com/ublue-os/ublue-rebase-tool</url>
   <url type="bugtracker">https://github.com/ublue-os/ublue-rebase-tool/issues</url>
   <url type="vcs-browser">https://github.com/ublue-os/ublue-rebase-tool</url>

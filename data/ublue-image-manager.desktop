@@ -1,7 +1,7 @@
 [Desktop Entry]
-Name=Universal Blue Image Manager
+Name=Atomic Image Manager
 GenericName=System Image Manager
-Comment=Modern GUI for managing Universal Blue custom images with guidance-based operations
+Comment=Modern GUI for managing atomic/ostree system images
 Exec=ublue-image-manager
 Icon=io.github.ublue.RebaseTool
 Terminal=false
@@ -9,4 +9,4 @@ Type=Application
 Categories=System;Settings;
 Keywords=universal-blue;rebase;rollback;rpm-ostree;immutable;atomic;
 StartupNotify=true
-StartupWMClass=Universal Blue Image Manager
+StartupWMClass=Atomic Image Manager

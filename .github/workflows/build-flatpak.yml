@@ -65,7 +65,7 @@ jobs:
       run: |
         gh release create v${{ steps.get_version.outputs.VERSION }} \
           --title "Release v${{ steps.get_version.outputs.VERSION }}" \
-          --notes "## Universal Blue Rebase Tool v${{ steps.get_version.outputs.VERSION }}
+          --notes "## Atomic Image Manager v${{ steps.get_version.outputs.VERSION }}
         
         ### Installation
         \`\`\`bash
@@ -80,14 +80,14 @@ jobs:
         ### Features
         - Native GTK4/libadwaita interface
         - Live progress tracking with command output
-        - Support for all Universal Blue variants
+        - Support for Fedora atomic and Universal Blue variants
         - Full deployment history access
         - Safe rebase and rollback operations
         
         ### Requirements
         - Flatpak
         - GNOME 47 runtime
-        - Universal Blue system (Bazzite, Bluefin, Aurora)"
+        - Atomic/ostree system (Silverblue, Kinoite, Universal Blue variants)"
 
     - name: Upload Release Asset
       env:

@@ -1,6 +1,6 @@
-# Universal Blue Rebase Tool
+# Atomic Image Manager
 
-A native GTK4/libadwaita application for managing Universal Blue system deployments with full rpm-ostree integration. Allows easy rebasing between Universal Blue variants and rollback to previous deployments.
+A native GTK4/libadwaita application for managing atomic/ostree system deployments with full rpm-ostree integration. Allows easy rebasing between Fedora atomic variants (Silverblue, Kinoite) and Universal Blue images, with rollback to previous deployments.
 
 ## ✨ Features
 
@@ -8,11 +8,19 @@ A native GTK4/libadwaita application for managing Universal Blue system deployme
 - **Native GTK4 Interface** - Pure GTK4/libadwaita application (no WebKit dependencies)
 - **Direct System Integration** - Full rpm-ostree integration via flatpak-spawn
 - **Live Progress Tracking** - Real-time command output during rebase/rollback operations
-- **Variant Selection** - Dropdown menus for all Universal Blue image variants
-- **90-Day History** - Access to full Universal Blue deployment history
+- **Variant Selection** - Dropdown menus for all image variants
+- **Full History** - Access to complete deployment history
 - **Safe Operations** - Confirmation dialogs for all system modifications
 
 ### Supported Images & Variants
+
+#### Fedora Atomic Desktops
+- **Silverblue** - Immutable GNOME desktop
+  - Latest, 40, 41, Rawhide versions
+- **Kinoite** - Immutable KDE Plasma desktop  
+  - Latest, 40, 41, Rawhide versions
+
+#### Universal Blue Images
 - **Bazzite** - Gaming-focused image
   - Default, GNOME, Deck, DX, NVIDIA, AMD variants
 - **Bluefin** - Developer-focused image
@@ -185,7 +193,7 @@ dbus-monitor --system "interface='org.projectatomic.rpmostree1'"
 ### Common Issues
 
 **"Unsupported System" Error**
-- Ensure you're running on a Universal Blue system
+- Ensure you're running on an atomic/ostree system
 - Check that rpm-ostree is available
 
 **Operations Timing Out**
@@ -209,4 +217,4 @@ GPL-3.0 - See [LICENSE](LICENSE) file for details
 
 ---
 
-Built with ❤️ for the Universal Blue community
+Built with ❤️ for the atomic desktop community

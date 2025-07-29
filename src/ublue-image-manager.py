@@ -27,8 +27,8 @@ from history_manager import HistoryManager
 from ui.simple_confirmation_dialog import ConfirmationDialog
 
 
-class UBlueImageManager(Adw.Application):
-    """Main application class"""
+class AtomicImageManager(Adw.Application):
+    """Main application class for Atomic Image Manager"""
     
     def __init__(self):
         super().__init__(
@@ -40,16 +40,16 @@ class UBlueImageManager(Adw.Application):
     def do_activate(self):
         """Activate the application"""
         if not self.window:
-            self.window = UBlueImageWindow(self)
+            self.window = AtomicImageWindow(self)
         self.window.present()
 
 
-class UBlueImageWindow(Adw.ApplicationWindow):
-    """Main application window"""
+class AtomicImageWindow(Adw.ApplicationWindow):
+    """Main application window for Atomic Image Manager"""
     
     def __init__(self, app):
         super().__init__(application=app)
-        self.set_title("Universal Blue Rebase Tool")
+        self.set_title("Atomic Image Manager")
         self.set_default_size(900, 600)
         # Connect to delete-event to prevent accidental closing
         self.connect('close-request', self._on_close_request)
@@ -59,8 +59,8 @@ class UBlueImageWindow(Adw.ApplicationWindow):
         self.deployment_manager = DeploymentManager()
         self.history_manager = HistoryManager()
         
-        # Check if running on Universal Blue system
-        if not self.check_universal_blue_system():
+        # Check if running on atomic/ostree system
+        if not self.check_atomic_system():
             self.show_unsupported_system_dialog()
             return
             
@@ -70,8 +70,8 @@ class UBlueImageWindow(Adw.ApplicationWindow):
         # Load initial data
         self.refresh_system_status()
         
-    def check_universal_blue_system(self):
-        """Check if running on a Universal Blue system"""
+    def check_atomic_system(self):
+        """Check if running on an atomic/ostree system"""
         try:
             # Check for rpm-ostree via D-Bus (works in flatpak)
             try:
@@ -89,22 +89,24 @@ class UBlueImageWindow(Adw.ApplicationWindow):
             except:
                 return False
                 
-            # Check for Universal Blue systems in os-release
+            # Check for atomic systems in os-release
             # In flatpak, we need to check the host's os-release
             os_release_paths = ['/run/host/etc/os-release', '/etc/os-release']
             for os_release_path in os_release_paths:
                 if os.path.exists(os_release_path):
                     with open(os_release_path, 'r') as f:
                         content = f.read().lower()
-                        # Check for known Universal Blue variants
-                        ub_identifiers = [
+                        # Check for known atomic system identifiers
+                        atomic_identifiers = [
                             'bazzite', 'bluefin', 'aurora', 'ucore',
-                            'universal-blue', 'ublue', 'ublue-os'
+                            'universal-blue', 'ublue', 'ublue-os',
+                            'silverblue', 'kinoite', 'fedora-silverblue',
+                            'fedora-kinoite', 'ostree', 'atomic'
                         ]
-                        if any(identifier in content for identifier in ub_identifiers):
+                        if any(identifier in content for identifier in atomic_identifiers):
                             return True
                         
-            # Check current deployment for ublue
+            # Check current deployment for atomic systems
             status = subprocess.run(['rpm-ostree', 'status', '--json'],
                                   capture_output=True, text=True)
             if status.returncode == 0:
@@ -115,16 +117,23 @@ class UBlueImageWindow(Adw.ApplicationWindow):
                     deployment = deployments[0]
                     origin = deployment.get('origin', '')
                     
-                    # Check for ublue in origin
-                    if 'ublue' in origin.lower() or 'ghcr.io/ublue-os' in origin.lower():
+                    # Check for known atomic systems in origin
+                    atomic_origins = [
+                        'ublue', 'ghcr.io/ublue-os', 'silverblue', 
+                        'kinoite', 'quay.io/fedora', 'fedora-silverblue',
+                        'fedora-kinoite'
+                    ]
+                    if any(sys in origin.lower() for sys in atomic_origins):
                         return True
                         
-                    # Check base-commit-meta for Universal Blue
+                    # Check base-commit-meta for atomic systems
                     base_meta = deployment.get('base-commit-meta', {})
                     if base_meta:
                         for key, value in base_meta.items():
-                            if isinstance(value, str) and 'ublue' in value.lower():
-                                return True
+                            if isinstance(value, str):
+                                for sys in atomic_origins:
+                                    if sys in value.lower():
+                                        return True
                         
         except Exception as e:
             print(f"Error checking system: {e}")
@@ -136,8 +145,8 @@ class UBlueImageWindow(Adw.ApplicationWindow):
         dialog = Adw.MessageDialog.new(
             self,
             "Unsupported System",
-            "This tool is designed for Universal Blue rpm-ostree systems only.\n\n"
-            "Please visit universalblue.org for more information."
+            "This tool is designed for atomic/ostree-based systems only.\n\n"
+            "Supported systems include Fedora Silverblue, Kinoite, and Universal Blue variants."
         )
         dialog.add_response("close", "Close")
         dialog.set_response_appearance("close", Adw.ResponseAppearance.DESTRUCTIVE)
@@ -148,7 +157,7 @@ class UBlueImageWindow(Adw.ApplicationWindow):
         """Build the main UI"""
         # Create header bar with window controls
         header_bar = Adw.HeaderBar()
-        self.set_title("Universal Blue Rebase Tool")
+        self.set_title("Atomic Image Manager")
         
         # Add refresh button
         refresh_button = Gtk.Button()
@@ -192,13 +201,13 @@ class UBlueImageWindow(Adw.ApplicationWindow):
         # Set window content
         self.set_content(main_box)
         
-    def _on_close_request(self):
+    def _on_close_request(self, widget):
         """Handle window close request"""
         # Only close if user explicitly wants to
         dialog = Adw.MessageDialog.new(
             self,
             "Close Application?",
-            "Are you sure you want to close the Universal Blue Rebase Tool?"
+            "Are you sure you want to close the Atomic Image Manager?"
         )
         dialog.add_response("cancel", "Cancel")
         dialog.add_response("close", "Close")
@@ -229,10 +238,10 @@ class UBlueImageWindow(Adw.ApplicationWindow):
         
         # Available images list
         images_group = Adw.PreferencesGroup()
-        images_group.set_title("Available Universal Blue Images")
+        images_group.set_title("Available Atomic Images")
         images_group.set_description("Select an image to rebase your system")
         
-        # Add Universal Blue images
+        # Add atomic images
         self.images_list = Gtk.ListBox()
         self.images_list.set_selection_mode(Gtk.SelectionMode.NONE)
         self.images_list.add_css_class("boxed-list")
@@ -260,7 +269,7 @@ class UBlueImageWindow(Adw.ApplicationWindow):
         # Deployments list
         deployments_group = Adw.PreferencesGroup()
         deployments_group.set_title("System Deployments")
-        deployments_group.set_description("All available system deployments (90-day history on Universal Blue)")
+        deployments_group.set_description("All available system deployments")
         
         self.deployments_list = Gtk.ListBox()
         self.deployments_list.set_selection_mode(Gtk.SelectionMode.NONE)
@@ -289,8 +298,30 @@ class UBlueImageWindow(Adw.ApplicationWindow):
         return scrolled
         
     def populate_images_list(self):
-        """Populate the list of available Universal Blue images"""
+        """Populate the list of available atomic images"""
         images = [
+            {
+                "name": "Fedora Silverblue",
+                "base_url": "ostree-unverified-registry:quay.io/fedora/fedora-silverblue",
+                "description": "Immutable desktop OS with GNOME",
+                "variants": [
+                    {"name": "Latest", "suffix": ":latest", "desc": "Latest stable release"},
+                    {"name": "40", "suffix": ":40", "desc": "Fedora 40"},
+                    {"name": "41", "suffix": ":41", "desc": "Fedora 41"},
+                    {"name": "Rawhide", "suffix": ":rawhide", "desc": "Development version"}
+                ]
+            },
+            {
+                "name": "Fedora Kinoite",
+                "base_url": "ostree-unverified-registry:quay.io/fedora/fedora-kinoite",
+                "description": "Immutable desktop OS with KDE Plasma",
+                "variants": [
+                    {"name": "Latest", "suffix": ":latest", "desc": "Latest stable release"},
+                    {"name": "40", "suffix": ":40", "desc": "Fedora 40"},
+                    {"name": "41", "suffix": ":41", "desc": "Fedora 41"},
+                    {"name": "Rawhide", "suffix": ":rawhide", "desc": "Development version"}
+                ]
+            },
             {
                 "name": "Bazzite",
                 "base_url": "ostree-image-signed:docker://ghcr.io/ublue-os/bazzite",
@@ -515,8 +546,20 @@ class UBlueImageWindow(Adw.ApplicationWindow):
         
         # Build full image name and URL
         variant_suffix = variant_info["suffix"]
-        full_name = f"{base_name}{variant_suffix}" if variant_suffix else base_name
-        image_url = f"{variant_dropdown.base_url}{variant_suffix}:latest"
+        # Build display name - remove colon for Fedora variants
+        if variant_suffix and variant_suffix.startswith(':'):
+            display_suffix = variant_suffix[1:]  # Remove the colon
+            full_name = f"{base_name} {display_suffix}"
+        else:
+            full_name = f"{base_name}{variant_suffix}" if variant_suffix else base_name
+        # For Fedora atomic, suffix includes the tag (e.g., :latest, :40)
+        # For Universal Blue, we need to add :latest
+        if variant_suffix and variant_suffix.startswith(':'):
+            # Fedora atomic style - suffix includes the tag
+            image_url = f"{variant_dropdown.base_url}{variant_suffix}"
+        else:
+            # Universal Blue style - add :latest
+            image_url = f"{variant_dropdown.base_url}{variant_suffix}:latest"
         
         # Show confirmation with full variant name
         dialog = ConfirmationDialog(
@@ -897,7 +940,7 @@ class UBlueImageWindow(Adw.ApplicationWindow):
 
 def main():
     """Main entry point"""
-    app = UBlueImageManager()
+    app = AtomicImageManager()
     return app.run(sys.argv)
 
 
