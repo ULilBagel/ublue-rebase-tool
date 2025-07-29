@@ -1,0 +1,490 @@
+#!/usr/bin/env python3
+"""
+CommandExecutor service for safe command execution with progress tracking
+Following Universal Blue security patterns with portal/polkit authentication
+"""
+
+import subprocess
+import threading
+import queue
+import time
+import json
+import re
+from typing import Optional, Callable, List, Tuple
+from gi.repository import GLib, Gio
+
+class CommandExecutor:
+    """Service for safe command execution with proper authentication and progress tracking"""
+    
+    def __init__(self):
+        self.current_process: Optional[subprocess.Popen] = None
+        self.output_queue = queue.Queue()
+        self.is_executing = False
+        self.execution_lock = threading.Lock()
+        
+    def execute_with_progress(self, command: List[str], progress_callback: Callable[[str], None]) -> Tuple[bool, str, str]:
+        """
+        Execute command with real-time progress updates
+        
+        Args:
+            command: Command as list of arguments (no shell injection)
+            progress_callback: Function to call with each output line
+            
+        Returns:
+            Tuple of (success, output, error_type)
+            error_type can be: 'network', 'auth', 'timeout', 'general'
+        """
+        with self.execution_lock:
+            if self.is_executing:
+                return False, "Another command is already executing", "general"
+            
+            self.is_executing = True
+            
+        try:
+            # Start the subprocess with proper argument list to prevent injection
+            self.current_process = subprocess.Popen(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+                universal_newlines=True
+            )
+            
+            # Read output line by line
+            output_lines = []
+            while True:
+                if self.current_process.poll() is not None:
+                    # Process has finished
+                    break
+                    
+                line = self.current_process.stdout.readline()
+                if line:
+                    line = line.rstrip()
+                    output_lines.append(line)
+                    # Call progress callback in main thread
+                    if False:  # Remove test mode
+                        # In test mode, call directly
+                        progress_callback(line)
+                    else:
+                        # In production, use idle_add
+                        GLib.idle_add(progress_callback, line)
+                else:
+                    # Small sleep to prevent busy waiting
+                    time.sleep(0.01)
+            
+            # Get remaining output
+            remaining, _ = self.current_process.communicate()
+            if remaining:
+                for line in remaining.splitlines():
+                    output_lines.append(line)
+                    if False:  # Remove test mode
+                        # In test mode, call directly
+                        progress_callback(line)
+                    else:
+                        # In production, use idle_add
+                        GLib.idle_add(progress_callback, line)
+            
+            # Check return code
+            success = self.current_process.returncode == 0
+            output = '\n'.join(output_lines)
+            
+            if success:
+                return True, output, ""
+            else:
+                # Analyze error type
+                error_type = self._analyze_error_type(output, self.current_process.returncode)
+                return False, f"Command failed with exit code {self.current_process.returncode}: {output}", error_type
+                
+        except subprocess.TimeoutExpired:
+            if self.current_process:
+                self.current_process.kill()
+            return False, "Command execution timed out", "timeout"
+        except Exception as e:
+            return False, f"Command execution error: {str(e)}", "general"
+        finally:
+            self.is_executing = False
+            self.current_process = None
+    
+    def _analyze_error_type(self, output: str, return_code: int) -> str:
+        """Analyze command output to determine error type"""
+        output_lower = output.lower()
+        
+        # Network-related errors
+        if any(keyword in output_lower for keyword in [
+            'network', 'connection', 'timeout', 'unable to connect',
+            'cannot reach', 'no route to host', 'name or service not known',
+            'temporary failure', 'could not resolve', 'dial tcp'
+        ]):
+            return 'network'
+        
+        # Authentication errors
+        if any(keyword in output_lower for keyword in [
+            'authentication', 'permission denied', 'unauthorized',
+            'access denied', 'forbidden', 'polkit', 'password'
+        ]):
+            return 'auth'
+        
+        # Specific rpm-ostree errors
+        if 'already in use' in output_lower or ('transaction' in output_lower and ('another' in output_lower or 'running' in output_lower or 'busy' in output_lower)):
+            return 'busy'
+        elif 'no such' in output_lower or 'not found' in output_lower:
+            return 'not_found'
+        
+        return 'general'
+    
+    def execute_with_confirmation(self, command: List[str], warning_text: str, 
+                                  confirm_callback: Callable[[bool], None],
+                                  progress_callback: Optional[Callable[[str], None]] = None) -> None:
+        """
+        Execute command after showing confirmation dialog
+        
+        Args:
+            command: Command as list of arguments
+            warning_text: Warning message to show in confirmation
+            confirm_callback: Called with user's confirmation choice
+            progress_callback: Optional progress updates
+        """
+        # This method is designed to be called from UI to show confirmation
+        # The actual confirmation dialog will be created by the UI layer
+        # This separation maintains the service pattern
+        
+        def execute_after_confirmation(confirmed: bool):
+            if confirmed and progress_callback:
+                # Execute in a separate thread to avoid blocking UI
+                def run_command():
+                    success, output, error_type = self.execute_with_progress(command, progress_callback)
+                    GLib.idle_add(confirm_callback, success, error_type)
+                
+                threading.Thread(target=run_command, daemon=True).start()
+            else:
+                confirm_callback(False, "")
+        
+        return execute_after_confirmation
+    
+    def request_elevated_privileges(self, action_id: str = "org.freedesktop.policykit.exec", 
+                                    max_retries: int = 3) -> Tuple[bool, str]:
+        """
+        Request elevated privileges via polkit with retry support
+        
+        Args:
+            action_id: PolicyKit action ID
+            max_retries: Maximum number of retry attempts
+            
+        Returns:
+            Tuple of (is_authorized, error_message)
+        """
+        for attempt in range(max_retries):
+            try:
+                # Create polkit authority
+                authority = Gio.DBusProxy.new_for_bus_sync(
+                    Gio.BusType.SYSTEM,
+                    Gio.DBusProxyFlags.NONE,
+                    None,
+                    "org.freedesktop.PolicyKit1",
+                    "/org/freedesktop/PolicyKit1/Authority",
+                    "org.freedesktop.PolicyKit1.Authority",
+                    None
+                )
+                
+                # Prepare subject (current process)
+                subject = GLib.Variant('(sa{sv})', ('unix-process', {
+                    'pid': GLib.Variant('u', subprocess.os.getpid()),
+                    'start-time': GLib.Variant('t', 0),
+                }))
+                
+                # Check authorization
+                result = authority.CheckAuthorization(
+                    subject,
+                    action_id,
+                    {},
+                    1,  # Allow user interaction
+                    '',
+                    None
+                )
+                
+                # Parse result
+                is_authorized = result[0][0]
+                if is_authorized:
+                    return True, ""
+                else:
+                    if attempt < max_retries - 1:
+                        # User cancelled, offer retry
+                        continue
+                    else:
+                        return False, "Authentication cancelled by user"
+                
+            except GLib.Error as e:
+                if "org.freedesktop.PolicyKit1.Error.Cancelled" in str(e):
+                    if attempt < max_retries - 1:
+                        continue
+                    else:
+                        return False, "Authentication cancelled"
+                else:
+                    return False, f"Polkit error: {str(e)}"
+            except Exception as e:
+                return False, f"Authorization error: {str(e)}"
+        
+        return False, "Maximum authentication attempts exceeded"
+    
+    def cancel_current_execution(self) -> bool:
+        """
+        Cancel the currently executing command
+        
+        Returns:
+            True if cancelled, False if no command was running
+        """
+        if self.current_process and self.is_executing:
+            try:
+                self.current_process.terminate()
+                # Give it a moment to terminate gracefully
+                time.sleep(0.5)
+                if self.current_process.poll() is None:
+                    # Force kill if still running
+                    self.current_process.kill()
+                return True
+            except Exception as e:
+                print(f"Error cancelling command: {e}")
+        return False
+    
+    def validate_command(self, command: List[str]) -> Tuple[bool, Optional[str]]:
+        """
+        Validate command for safety before execution
+        
+        Args:
+            command: Command as list of arguments
+            
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        if not command:
+            return False, "Empty command"
+        
+        # Only allow rpm-ostree commands
+        if command[0] != "rpm-ostree":
+            return False, "Only rpm-ostree commands are allowed"
+        
+        # Check for shell metacharacters that shouldn't be in arguments
+        dangerous_chars = ['&', '|', ';', '$', '`', '(', ')', '<', '>', '"', "'"]
+        for arg in command[1:]:  # Skip checking the command itself
+            for char in dangerous_chars:
+                if char in arg and not (arg.startswith('"') and arg.endswith('"')):
+                    return False, f"dangerous character '{char}' in argument"
+        
+        # Validate rpm-ostree commands specifically
+        if command[0] == "rpm-ostree":
+            if len(command) < 2:
+                return False, "Incomplete rpm-ostree command"
+            
+            allowed_subcommands = ["status", "rebase", "rollback", "deploy", "cleanup"]
+            if command[1] not in allowed_subcommands:
+                return False, f"Unsupported rpm-ostree subcommand: {command[1]}"
+            
+            # Validate rebase URLs
+            if command[1] == "rebase" and len(command) > 2:
+                image_url = command[2]
+                is_valid, error_msg = self._validate_image_url(image_url)
+                if not is_valid:
+                    return False, error_msg
+        
+        return True, None
+    
+    def _validate_image_url(self, image_url: str) -> Tuple[bool, Optional[str]]:
+        """
+        Validate image URL against allowed registries and patterns
+        
+        Args:
+            image_url: Container image URL to validate
+            
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        # Define allowed registries with their validation rules
+        allowed_registries = {
+            "ghcr.io/ublue-os/": {
+                "name": "Universal Blue Official",
+                "allowed_paths": ["bluefin", "aurora", "bazzite", "silverblue", "kinoite"],
+                "require_tag": True
+            },
+            "quay.io/fedora-ostree-desktop/": {
+                "name": "Fedora OSTree Desktop",
+                "allowed_paths": ["silverblue", "kinoite", "sericea", "onyx"],
+                "require_tag": True
+            },
+            "registry.fedoraproject.org/": {
+                "name": "Fedora Registry",
+                "allowed_paths": ["fedora/fedora-silverblue", "fedora/fedora-kinoite"],
+                "require_tag": True
+            }
+        }
+        
+        # Check if URL starts with any allowed registry
+        matching_registry = None
+        registry_config = None
+        for registry, config in allowed_registries.items():
+            if image_url.startswith(registry):
+                matching_registry = registry
+                registry_config = config
+                break
+        
+        if not matching_registry:
+            return False, (
+                f"Image URL must be from an allowed registry. "
+                f"Allowed registries: {', '.join(allowed_registries.keys())}"
+            )
+        
+        # Extract path after registry
+        path_after_registry = image_url[len(matching_registry):]
+        
+        # Check for suspicious patterns first
+        suspicious_patterns = [
+            "..",  # Path traversal
+            "//",  # Double slashes
+            "\\",  # Backslashes
+            " ",   # Spaces
+            "\t",  # Tabs
+            "\n",  # Newlines
+            ";",   # Command separator
+            "|",   # Pipe
+            "&",   # Background
+            "$",   # Variable expansion
+            "`",   # Command substitution
+            "(",   # Subshell
+            ")",   # Subshell
+            "{",   # Brace expansion
+            "}",   # Brace expansion
+            "<",   # Redirection
+            ">",   # Redirection
+            "~",   # Home directory
+            "!",   # History expansion
+            "'",   # Quote
+            '"',   # Quote
+        ]
+        
+        for pattern in suspicious_patterns:
+            if pattern in path_after_registry:
+                return False, f"Image URL contains suspicious pattern"
+        
+        # Check URL length
+        if len(image_url) > 512:
+            return False, "Image URL is too long (max 512 characters)"
+        
+        # Validate path structure
+        parts = path_after_registry.split("/")
+        if len(parts) == 0:
+            return False, "Image URL path is empty"
+        
+        # Check if path matches allowed paths for this registry
+        if registry_config.get("allowed_paths"):
+            # Extract path without tag
+            if ":" in parts[-1]:
+                # Has tag, remove it from last part
+                path_parts = parts[:-1] + [parts[-1].split(":")[0]]
+                path_prefix = "/".join(path_parts)
+            else:
+                path_prefix = path_after_registry.rstrip("/")
+            
+            if not any(path_prefix.startswith(allowed) for allowed in registry_config["allowed_paths"]):
+                return False, (
+                    f"Image path '{path_prefix}' not allowed for {registry_config['name']}. "
+                    f"Allowed paths: {', '.join(registry_config['allowed_paths'])}"
+                )
+        
+        # Check for tag requirement
+        if registry_config.get("require_tag", True):
+            # The last part should contain a colon for the tag
+            if ":" not in parts[-1]:
+                return False, "Image URL must include a tag (e.g., :latest, :stable)"
+            
+            # Validate tag format
+            image_name, tag = parts[-1].rsplit(":", 1)
+            if not image_name:
+                return False, "Image name is empty"
+            if not tag:
+                return False, "Tag is empty"
+            
+            # Validate tag characters (alphanumeric, dots, dashes, underscores)
+            import re
+            if not re.match(r'^[a-zA-Z0-9._-]+$', tag):
+                return False, f"Invalid tag format: {tag}"
+        
+        
+        return True, None
+        
+    def execute_rebase(self, image_url: str, progress_callback: Optional[Callable[[str], None]] = None) -> dict:
+        """Execute rpm-ostree rebase command with optional progress updates"""
+        try:
+            # Try using flatpak-spawn if available
+            from rpm_ostree_helper import rebase_with_progress
+            
+            if progress_callback:
+                success, output = rebase_with_progress(image_url, progress_callback)
+            else:
+                from rpm_ostree_helper import rebase as rpm_rebase
+                success, output = rpm_rebase(image_url)
+                
+            return {
+                'success': success,
+                'output': output,
+                'error': output if not success else None,
+                'error_type': 'general' if not success else None
+            }
+        except ImportError:
+            # Fallback to direct command
+            command = ["rpm-ostree", "rebase", image_url]
+            
+            if not progress_callback:
+                progress_callback = lambda line: None
+                
+            success, output, error_type = self.execute_with_progress(command, progress_callback)
+            
+            return {
+                'success': success,
+                'output': output,
+                'error': output if not success else None,
+                'error_type': error_type
+            }
+        
+    def execute_rollback(self, deployment_index: int, progress_callback: Optional[Callable[[str], None]] = None) -> dict:
+        """Execute rpm-ostree rollback to specific deployment with optional progress updates"""
+        # rpm-ostree doesn't have direct index-based rollback
+        # We need to use 'rpm-ostree rollback' for index 1
+        if deployment_index == 1:
+            try:
+                # Try using flatpak-spawn if available
+                from rpm_ostree_helper import rollback_with_progress
+                
+                if progress_callback:
+                    success, output = rollback_with_progress(progress_callback)
+                else:
+                    from rpm_ostree_helper import rollback as rpm_rollback
+                    success, output = rpm_rollback()
+                    
+                return {
+                    'success': success,
+                    'output': output,
+                    'error': output if not success else None,
+                    'error_type': 'general' if not success else None
+                }
+            except ImportError:
+                # Fallback to direct command
+                command = ["rpm-ostree", "rollback"]
+                
+                if not progress_callback:
+                    progress_callback = lambda line: None
+                    
+                success, output, error_type = self.execute_with_progress(command, progress_callback)
+                
+                return {
+                    'success': success,
+                    'output': output,
+                    'error': output if not success else None,
+                    'error_type': error_type
+                }
+        else:
+            # For other deployments, we'd need to use deploy --index
+            return {
+                'success': False,
+                'error': 'Only rollback to previous deployment (index 1) is supported',
+                'error_type': 'general'
+            }

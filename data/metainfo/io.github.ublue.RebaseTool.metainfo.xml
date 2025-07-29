@@ -3,38 +3,66 @@
   <id>io.github.ublue.RebaseTool</id>
   
   <name>Universal Blue Image Manager</name>
-  <summary>Modern GUI for managing Universal Blue custom images</summary>
+  <summary>Manage Universal Blue custom images on rpm-ostree systems</summary>
   
   <description>
     <p>
-      Universal Blue Image Manager provides a modern libadwaita-compliant interface for managing 
-      Universal Blue custom images. Following Universal Blue development best practices, it provides 
-      guidance and information rather than direct system modifications.
+      Universal Blue Image Manager provides a modern graphical interface for managing 
+      Universal Blue custom images on rpm-ostree-based systems. It follows Universal Blue 
+      development best practices and provides a safe, guided experience for system image operations.
     </p>
-    <p>Features:</p>
+    <p>
+      The application is designed for users of Universal Blue images (Bluefin, Aurora, Bazzite, etc.) 
+      who want a user-friendly way to rebase between different image variants or rollback to 
+      previous deployments.
+    </p>
+    <p>Key Features:</p>
     <ul>
-      <li>Visual system status monitoring with real rpm-ostree integration</li>
-      <li>Guidance-based rebase operations following UB patterns</li>
-      <li>Modern libadwaita interface with adaptive design</li>
-      <li>Portal-based security following UB standards</li>
+      <li>Visual system status monitoring with real-time rpm-ostree integration</li>
+      <li>Safe rebase operations with confirmation dialogs and progress tracking</li>
+      <li>Deployment history and rollback capabilities</li>
+      <li>Modern libadwaita interface with responsive design</li>
+      <li>Comprehensive error handling and recovery guidance</li>
       <li>Support for all Universal Blue image variants</li>
+      <li>Demo mode for non-ostree systems</li>
     </ul>
+    <p>
+      The application requires an rpm-ostree-based system (like Fedora Silverblue or any 
+      Universal Blue image) for full functionality. On other systems, it runs in demo mode 
+      to showcase the interface and features.
+    </p>
   </description>
   
   <metadata_license>CC0-1.0</metadata_license>
-  <project_license>GPL-3.0+</project_license>
+  <project_license>GPL-3.0-or-later</project_license>
   
   <launchable type="desktop-id">io.github.ublue.RebaseTool.desktop</launchable>
   
+  <screenshots>
+    <screenshot type="default">
+      <caption>Main window showing system status</caption>
+      <image>https://raw.githubusercontent.com/ublue-os/ublue-rebase-tool/main/screenshots/main-window.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Rebase confirmation dialog</caption>
+      <image>https://raw.githubusercontent.com/ublue-os/ublue-rebase-tool/main/screenshots/rebase-dialog.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Progress tracking during operation</caption>
+      <image>https://raw.githubusercontent.com/ublue-os/ublue-rebase-tool/main/screenshots/progress-tracking.png</image>
+    </screenshot>
+  </screenshots>
+  
   <releases>
-    <release version="2.0.0" date="$(date +%Y-%m-%d)">
+    <release version="2.0.0" date="2024-01-29">
       <description>
-        <p>Complete rewrite following Universal Blue best practices</p>
+        <p>Complete rewrite following Universal Blue best practices:</p>
         <ul>
-          <li>Modern libadwaita interface with adaptive design</li>
-          <li>Guidance-based operations following UB patterns</li>
-          <li>Proper portal integration and security model</li>
-          <li>Universal Blue compliant architecture</li>
+          <li>Modern libadwaita interface with responsive design</li>
+          <li>Safe, confirmation-based operations</li>
+          <li>Real-time progress tracking and error handling</li>
+          <li>Comprehensive test suite for reliability</li>
+          <li>Proper Flatpak packaging with sandboxing</li>
         </ul>
       </description>
     </release>
@@ -45,6 +73,32 @@
     <category>Settings</category>
   </categories>
   
+  <keywords>
+    <keyword>universal-blue</keyword>
+    <keyword>rpm-ostree</keyword>
+    <keyword>rebase</keyword>
+    <keyword>rollback</keyword>
+    <keyword>bluefin</keyword>
+    <keyword>aurora</keyword>
+    <keyword>bazzite</keyword>
+    <keyword>immutable</keyword>
+    <keyword>atomic</keyword>
+    <keyword>ostree</keyword>
+  </keywords>
+  
   <developer_name>Universal Blue Community</developer_name>
-  <url type="homepage">https://github.com/universal-blue</url>
+  <url type="homepage">https://github.com/ublue-os/ublue-rebase-tool</url>
+  <url type="bugtracker">https://github.com/ublue-os/ublue-rebase-tool/issues</url>
+  <url type="vcs-browser">https://github.com/ublue-os/ublue-rebase-tool</url>
+  
+  <content_rating type="oars-1.1" />
+  
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+  
+  <recommends>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </recommends>
 </component>
