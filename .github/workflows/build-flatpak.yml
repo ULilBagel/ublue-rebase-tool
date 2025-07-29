@@ -7,6 +7,10 @@ on:
     branches: [ master, main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   flatpak:
     name: Build Flatpak
@@ -56,46 +60,39 @@ jobs:
         echo "Version found: ${VERSION}"
 
     - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: v${{ steps.get_version.outputs.VERSION }}
-        release_name: Release v${{ steps.get_version.outputs.VERSION }}
-        body: |
-          ## Universal Blue Rebase Tool v${{ steps.get_version.outputs.VERSION }}
-          
-          ### Installation
-          ```bash
-          # Download the flatpak file, then:
-          flatpak install --user io.github.ublue.RebaseTool.flatpak
-          
-          # Or install runtime first if needed:
-          flatpak install flathub org.gnome.Platform//47
-          flatpak install --user io.github.ublue.RebaseTool.flatpak
-          ```
-          
-          ### Features
-          - Native GTK4/libadwaita interface
-          - Live progress tracking with command output
-          - Support for all Universal Blue variants
-          - Full deployment history access
-          - Safe rebase and rollback operations
-          
-          ### Requirements
-          - Flatpak
-          - GNOME 47 runtime
-          - Universal Blue system (Bazzite, Bluefin, Aurora)
-        draft: false
-        prerelease: false
+      run: |
+        gh release create v${{ steps.get_version.outputs.VERSION }} \
+          --title "Release v${{ steps.get_version.outputs.VERSION }}" \
+          --notes "## Universal Blue Rebase Tool v${{ steps.get_version.outputs.VERSION }}
+        
+        ### Installation
+        \`\`\`bash
+        # Download the flatpak file, then:
+        flatpak install --user io.github.ublue.RebaseTool.flatpak
+        
+        # Or install runtime first if needed:
+        flatpak install flathub org.gnome.Platform//47
+        flatpak install --user io.github.ublue.RebaseTool.flatpak
+        \`\`\`
+        
+        ### Features
+        - Native GTK4/libadwaita interface
+        - Live progress tracking with command output
+        - Support for all Universal Blue variants
+        - Full deployment history access
+        - Safe rebase and rollback operations
+        
+        ### Requirements
+        - Flatpak
+        - GNOME 47 runtime
+        - Universal Blue system (Bazzite, Bluefin, Aurora)"
 
     - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./io.github.ublue.RebaseTool.flatpak
-        asset_name: io.github.ublue.RebaseTool.flatpak
-        asset_content_type: application/octet-stream
+      run: |
+        gh release upload v${{ steps.get_version.outputs.VERSION }} \
+          ./io.github.ublue.RebaseTool.flatpak \
+          --clobber
