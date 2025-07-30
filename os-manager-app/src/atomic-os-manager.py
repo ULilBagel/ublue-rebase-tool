@@ -383,8 +383,6 @@ class OSManagerWindow(Adw.ApplicationWindow):
         # Create stack for different views
         self.stack = Gtk.Stack()
         self.stack.set_transition_type(Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
-        self.stack.set_vexpand(True)
-        self.stack.set_hexpand(True)
         
         # Configuration view
         self.create_config_view()
@@ -1263,7 +1261,8 @@ class OSManagerWindow(Adw.ApplicationWindow):
         import re
         
         # Look for ostree chunk fetching (e.g., "[0/48] Fetching ostree chunk 180fde2153970ba7d4a (26.4 MB)...done")
-        chunk_match = re.search(r'\[(\d+)/(\d+)\]\s*Fetching ostree chunk', line)
+        # Also matches "Fetching layer" for the final chunk
+        chunk_match = re.search(r'\[(\d+)/(\d+)\]\s*Fetching (?:ostree chunk|layer)', line)
         if chunk_match:
             current = int(chunk_match.group(1))
             total = int(chunk_match.group(2))
@@ -1296,8 +1295,8 @@ class OSManagerWindow(Adw.ApplicationWindow):
             self.status_label.set_text("Scanning metadata...")
         elif "Pulling manifest" in line:
             self.status_label.set_text("Pulling manifest...")
-        elif "Fetching ostree chunk" in line and "done" in line:
-            # Individual chunk completed, don't change status
+        elif ("Fetching ostree chunk" in line or "Fetching layer" in line) and "done" in line:
+            # Individual chunk/layer completed, don't change status
             pass
         elif "Importing" in line:
             self.status_label.set_text("Importing layers...")
