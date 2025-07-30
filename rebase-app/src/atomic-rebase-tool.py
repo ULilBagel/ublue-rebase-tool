@@ -557,18 +557,19 @@ class RebaseWindow(Adw.ApplicationWindow):
             self.progress_label.set_text("Rebase completed successfully!")
             
             # Show success dialog
-            dialog = Adw.MessageDialog.new(
-                self,
-                "Rebase Complete",
+            dialog = Adw.MessageDialog()
+            dialog.set_transient_for(self)
+            dialog.set_heading("Rebase Complete")
+            dialog.set_body(
                 "System rebase completed successfully!\n\n"
                 "Please reboot your system to boot into the new image."
             )
             dialog.add_response("ok", "OK")
             dialog.set_default_response("ok")
-            dialog.present()
             
-            # Switch back to selection view
+            # Switch back to selection view after dialog is closed
             dialog.connect("response", lambda d, r: self.stack.set_visible_child_name("selection"))
+            dialog.present()
             
             # Refresh system status
             self.refresh_system_status()
@@ -585,9 +586,10 @@ class RebaseWindow(Adw.ApplicationWindow):
                 self.status_label.set_text("The rebase could not be completed.")
                 
                 # Show simplified error dialog
-                dialog = Adw.MessageDialog.new(
-                    self,
-                    "Rebase Failed",
+                dialog = Adw.MessageDialog()
+                dialog.set_transient_for(self)
+                dialog.set_heading("Rebase Failed")
+                dialog.set_body(
                     "The rebase operation could not be completed.\n\n"
                     "This may be due to network issues or other system constraints."
                 )
@@ -598,11 +600,10 @@ class RebaseWindow(Adw.ApplicationWindow):
             
     def show_error(self, message):
         """Show error dialog"""
-        dialog = Adw.MessageDialog.new(
-            self,
-            "Error",
-            message
-        )
+        dialog = Adw.MessageDialog()
+        dialog.set_transient_for(self)
+        dialog.set_heading("Error")
+        dialog.set_body(message)
         dialog.add_response("ok", "OK")
         dialog.set_default_response("ok")
         dialog.add_css_class("error")
