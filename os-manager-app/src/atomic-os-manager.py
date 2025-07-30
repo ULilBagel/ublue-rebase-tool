@@ -1088,13 +1088,8 @@ class OSManagerWindow(Adw.ApplicationWindow):
         def append_log_line(line):
             """Append a line to the log view"""
             def add_line():
-                end_iter = self.log_buffer.get_end_iter()
-                self.log_buffer.insert(end_iter, line + "\n")
-                
-                # Auto-scroll to bottom
-                mark = self.log_buffer.create_mark(None, end_iter, False)
-                self.log_view.scroll_mark_onscreen(mark)
-                self.log_buffer.delete_mark(mark)
+                # Use the main append_log_line method which includes progress parsing
+                self.append_log_line(line)
                 return False
             
             GLib.idle_add(add_line)
@@ -1140,29 +1135,35 @@ class OSManagerWindow(Adw.ApplicationWindow):
         
     def on_cancel_clicked(self, button):
         """Handle cancel button click"""
-        def append_log_line(line):
-            """Append a line to the log view"""
-            end_iter = self.log_buffer.get_end_iter()
-            self.log_buffer.insert(end_iter, line + "\n")
-            self.log_view.scroll_to_iter(end_iter, 0.0, False, 0.0, 0.0)
-            
-        append_log_line("\n" + "="*60)
-        append_log_line("⚠️  Cancelling operation...")
+        # Append cancellation message
+        self.append_log_line("\n" + "="*60)
+        self.append_log_line("⚠️  Cancelling operation...")
         button.set_sensitive(False)
         
         # If this is a system update, kill the update process
         if self.is_system_update and self.update_process:
             self.cleanup_update_process()
+            # Update UI to show cancellation
+            self.progress_label.set_text("Update cancelled")
+            self.spinner.stop()
+            self.progress_bar.set_fraction(0.0)
+            self.progress_bar.set_text("")
+            self.status_label.set_text("You can safely go back to configuration.")
+            self.cancel_button.set_visible(False)
+            self.back_button.set_visible(True)
         else:
             # Cancel the current command execution
             self.command_executor.cancel_current_execution()
             
             # Also run rpm-ostree cancel to cancel the transaction
-        try:
-            subprocess.run(["flatpak-spawn", "--host", "rpm-ostree", "cancel"], 
-                         capture_output=True, text=True)
-            append_log_line("✅ Operation cancelled successfully")
-            append_log_line("\nYou can safely close this window or go back to make different changes.")
+            try:
+                subprocess.run(["flatpak-spawn", "--host", "rpm-ostree", "cancel"], 
+                             capture_output=True, text=True)
+                self.append_log_line("✅ Operation cancelled successfully")
+                self.append_log_line("\nYou can safely go back to make different changes.")
+            except Exception as e:
+                self.append_log_line(f"⚠️  Note: {e}")
+                self.append_log_line("The operation may have already completed or been cancelled.")
             
             # Update UI to show cancellation was successful
             self.progress_label.set_text("Operation cancelled")
@@ -1172,9 +1173,6 @@ class OSManagerWindow(Adw.ApplicationWindow):
             self.status_label.set_text("You can safely go back to make different changes.")
             self.cancel_button.set_visible(False)
             self.back_button.set_visible(True)
-        except Exception as e:
-            append_log_line(f"⚠️  Note: {e}")
-            append_log_line("The operation may have already completed or been cancelled.")
         
     def rebase_complete(self, result):
         """Handle rebase completion"""
