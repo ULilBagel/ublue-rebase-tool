@@ -24,7 +24,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from deployment_manager import DeploymentManager
 from command_executor import CommandExecutor
 from rpm_ostree_helper import get_status_json
-from ui.confirmation_dialog import ConfirmationDialog
+from ui.simple_confirmation_dialog import ConfirmationDialog
 
 
 class AtomicRebaseTool(Adw.Application):

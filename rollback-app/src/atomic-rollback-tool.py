@@ -24,7 +24,7 @@ from deployment_manager import DeploymentManager
 from registry_manager import RegistryManager
 from command_executor import CommandExecutor
 from rpm_ostree_helper import get_status_json
-from ui.confirmation_dialog import ConfirmationDialog
+from ui.simple_confirmation_dialog import ConfirmationDialog
 
 
 class AtomicRollbackTool(Adw.Application):
