@@ -378,11 +378,15 @@ class OSManagerWindow(Adw.ApplicationWindow):
         
         # Main content box
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        main_box.set_vexpand(True)
+        main_box.set_hexpand(True)
         main_box.append(header_bar)
         
         # Create stack for different views
         self.stack = Gtk.Stack()
         self.stack.set_transition_type(Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
+        self.stack.set_vexpand(True)
+        self.stack.set_hexpand(True)
         
         # Configuration view
         self.create_config_view()
@@ -391,16 +395,15 @@ class OSManagerWindow(Adw.ApplicationWindow):
         self.create_progress_view()
         
         main_box.append(self.stack)
-        
-        # Set size constraints to prevent unwanted expansion
         self.set_content(main_box)
-        self.set_size_request(800, 600)
         
     def create_config_view(self):
         """Create the configuration view"""
         # Scrolled window
         scrolled = Gtk.ScrolledWindow()
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scrolled.set_vexpand(True)
+        scrolled.set_hexpand(True)
         
         # Content box
         self.content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
