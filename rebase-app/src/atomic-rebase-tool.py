@@ -565,6 +565,11 @@ class RebaseWindow(Adw.ApplicationWindow):
     
     def rebase_complete(self, result):
         """Handle rebase completion"""
+        # Check if window is still valid
+        if not self.get_visible():
+            print("Window is not visible, skipping rebase completion handling")
+            return
+            
         self.spinner.stop()
         self.cancel_button.set_visible(False)
         self.back_button.set_visible(True)
@@ -583,14 +588,19 @@ class RebaseWindow(Adw.ApplicationWindow):
             dialog.add_response("ok", "OK")
             dialog.set_default_response("ok")
             
-            # Connect response handler and switch back after dialog closes
-            def on_dialog_response(dialog, response):
-                self.stack.set_visible_child_name("selection")
-                # Refresh system status after switching views
-                GLib.idle_add(self.refresh_system_status)
-                
-            dialog.connect("response", on_dialog_response)
+            # Show dialog and handle response
             dialog.present()
+            
+            # Don't connect to response signal - let the dialog close naturally
+            # and only switch back to selection view after a delay
+            def switch_back():
+                if self.stack:
+                    self.stack.set_visible_child_name("selection")
+                    self.refresh_system_status()
+                return False
+            
+            # Switch back after 100ms to ensure dialog is properly closed
+            GLib.timeout_add(100, switch_back)
         else:
             self.progress_label.set_text("Rebase failed")
             error_msg = result.get('error', 'Unknown error')
