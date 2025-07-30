@@ -143,6 +143,8 @@ class RebaseWindow(Adw.ApplicationWindow):
         
         # Main content
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        main_box.set_vexpand(True)
+        main_box.set_hexpand(True)
         
         # Add header bar to main box
         main_box.append(header_bar)
@@ -150,6 +152,8 @@ class RebaseWindow(Adw.ApplicationWindow):
         # Create stack for different views
         self.stack = Gtk.Stack()
         self.stack.set_transition_type(Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
+        self.stack.set_vexpand(True)
+        self.stack.set_hexpand(True)
         
         # Image selection view
         self.create_image_selection_view()
@@ -165,12 +169,20 @@ class RebaseWindow(Adw.ApplicationWindow):
         """Create the image selection view"""
         scrolled = Gtk.ScrolledWindow()
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scrolled.set_vexpand(True)
+        scrolled.set_hexpand(True)
         
         content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         content_box.set_margin_top(12)
         content_box.set_margin_bottom(12)
         content_box.set_margin_start(12)
         content_box.set_margin_end(12)
+        
+        # Create a clamp to limit maximum width while centering content
+        clamp = Adw.Clamp()
+        clamp.set_maximum_size(600)  # Maximum width for content
+        clamp.set_tightening_threshold(600)
+        clamp.set_child(content_box)
         
         # Current system info
         self.system_group = Adw.PreferencesGroup()
@@ -218,7 +230,7 @@ class RebaseWindow(Adw.ApplicationWindow):
         custom_group.add(custom_button_box)
         content_box.append(custom_group)
         
-        scrolled.set_child(content_box)
+        scrolled.set_child(clamp)
         self.stack.add_named(scrolled, "selection")
         
     def create_progress_view(self):
