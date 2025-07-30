@@ -391,15 +391,16 @@ class OSManagerWindow(Adw.ApplicationWindow):
         self.create_progress_view()
         
         main_box.append(self.stack)
+        
+        # Set size constraints to prevent unwanted expansion
         self.set_content(main_box)
+        self.set_size_request(800, 600)
         
     def create_config_view(self):
         """Create the configuration view"""
         # Scrolled window
         scrolled = Gtk.ScrolledWindow()
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        scrolled.set_vexpand(True)
-        scrolled.set_hexpand(True)
         
         # Content box
         self.content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
@@ -1261,8 +1262,7 @@ class OSManagerWindow(Adw.ApplicationWindow):
         import re
         
         # Look for ostree chunk fetching (e.g., "[0/48] Fetching ostree chunk 180fde2153970ba7d4a (26.4 MB)...done")
-        # Also matches "Fetching layer" for the final chunk
-        chunk_match = re.search(r'\[(\d+)/(\d+)\]\s*Fetching (?:ostree chunk|layer)', line)
+        chunk_match = re.search(r'\[(\d+)/(\d+)\]\s*Fetching ostree chunk', line)
         if chunk_match:
             current = int(chunk_match.group(1))
             total = int(chunk_match.group(2))
@@ -1295,13 +1295,18 @@ class OSManagerWindow(Adw.ApplicationWindow):
             self.status_label.set_text("Scanning metadata...")
         elif "Pulling manifest" in line:
             self.status_label.set_text("Pulling manifest...")
-        elif ("Fetching ostree chunk" in line or "Fetching layer" in line) and "done" in line:
-            # Individual chunk/layer completed, don't change status
+        elif "Fetching ostree chunk" in line and "done" in line:
+            # Individual chunk completed, don't change status
             pass
         elif "Importing" in line:
             self.status_label.set_text("Importing layers...")
         elif "Checking out tree" in line:
             self.status_label.set_text("Checking out files...")
+            # When we start checking out the tree, we're essentially done downloading
+            # Set progress to 100%
+            if "done" in line:
+                self.progress_bar.set_fraction(1.0)
+                self.progress_bar.set_text("100%")
         elif "Writing objects" in line:
             self.status_label.set_text("Writing objects...")
         elif "Staging deployment" in line:
