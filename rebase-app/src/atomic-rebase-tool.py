@@ -39,11 +39,20 @@ class AtomicRebaseTool(Adw.Application):
         self.deployment_manager = DeploymentManager()
         self.command_executor = CommandExecutor()
         
+        # Keep application alive
+        self.hold()
+        
     def do_activate(self):
         """Called when the application is activated"""
         if not self.window:
             self.window = RebaseWindow(application=self)
+            self.window.connect("destroy", self.on_window_destroy)
         self.window.present()
+        
+    def on_window_destroy(self, window):
+        """Handle window destruction"""
+        print("DEBUG: Window destroy signal received")
+        self.release()  # Release the hold on the application
         
     def do_startup(self):
         """Called when the application starts up"""
@@ -565,17 +574,20 @@ class RebaseWindow(Adw.ApplicationWindow):
     
     def rebase_complete(self, result):
         """Handle rebase completion"""
+        print(f"DEBUG: rebase_complete called with result: {result['success']}")
+        
         # Check if window is still valid
         if not self.get_visible():
             print("Window is not visible, skipping rebase completion handling")
             return
             
-        self.spinner.stop()
-        self.cancel_button.set_visible(False)
-        self.back_button.set_visible(True)
-        
-        if result['success']:
-            self.progress_label.set_text("Rebase completed successfully!")
+        try:
+            self.spinner.stop()
+            self.cancel_button.set_visible(False)
+            self.back_button.set_visible(True)
+            
+            if result['success']:
+                self.progress_label.set_text("Rebase completed successfully!")
             
             # Show success dialog
             dialog = Adw.MessageDialog()
@@ -625,6 +637,10 @@ class RebaseWindow(Adw.ApplicationWindow):
                 dialog.set_default_response("ok")
                 dialog.add_css_class("error")
                 dialog.present()
+        except Exception as e:
+            print(f"ERROR in rebase_complete: {e}")
+            import traceback
+            traceback.print_exc()
             
     def show_error(self, message):
         """Show error dialog"""
