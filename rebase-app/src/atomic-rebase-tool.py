@@ -242,9 +242,33 @@ class RebaseWindow(Adw.ApplicationWindow):
         self.progress_label.add_css_class("title-2")
         progress_box.append(self.progress_label)
         
-        # Log view
-        log_frame = Gtk.Frame()
-        log_frame.set_size_request(600, 400)
+        # Progress bar
+        self.progress_bar = Gtk.ProgressBar()
+        self.progress_bar.set_size_request(400, -1)
+        self.progress_bar.set_show_text(True)
+        self.progress_bar.set_text("")
+        self.progress_bar.set_fraction(0.0)
+        progress_box.append(self.progress_bar)
+        
+        # Status label
+        self.status_label = Gtk.Label()
+        self.status_label.set_text("")
+        self.status_label.add_css_class("dim-label")
+        self.status_label.set_margin_top(6)
+        progress_box.append(self.status_label)
+        
+        # Toggle log button
+        self.toggle_log_button = Gtk.Button()
+        self.toggle_log_button.set_label("Show Details")
+        self.toggle_log_button.set_margin_top(12)
+        self.toggle_log_button.connect("clicked", self.on_toggle_log)
+        progress_box.append(self.toggle_log_button)
+        
+        # Log view (initially hidden)
+        self.log_frame = Gtk.Frame()
+        self.log_frame.set_size_request(600, 300)
+        self.log_frame.set_visible(False)
+        self.log_frame.set_margin_top(12)
         
         scrolled_log = Gtk.ScrolledWindow()
         scrolled_log.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
@@ -261,15 +285,29 @@ class RebaseWindow(Adw.ApplicationWindow):
         self.log_buffer = self.log_view.get_buffer()
         
         scrolled_log.set_child(self.log_view)
-        log_frame.set_child(scrolled_log)
-        progress_box.append(log_frame)
+        self.log_frame.set_child(scrolled_log)
+        progress_box.append(self.log_frame)
+        
+        # Button box
+        self.button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        self.button_box.set_halign(Gtk.Align.CENTER)
+        self.button_box.set_margin_top(12)
+        
+        # Back button (initially hidden)
+        self.back_button = Gtk.Button()
+        self.back_button.set_label("Back to Image Selection")
+        self.back_button.connect("clicked", lambda w: self.stack.set_visible_child_name("selection"))
+        self.back_button.set_visible(False)
+        self.button_box.append(self.back_button)
         
         # Cancel button
         self.cancel_button = Gtk.Button()
         self.cancel_button.set_label("Cancel")
         self.cancel_button.add_css_class("destructive-action")
         self.cancel_button.connect("clicked", self.on_cancel_clicked)
-        progress_box.append(self.cancel_button)
+        self.button_box.append(self.cancel_button)
+        
+        progress_box.append(self.button_box)
         
         self.stack.add_named(progress_box, "progress")
         
@@ -363,21 +401,38 @@ class RebaseWindow(Adw.ApplicationWindow):
         # Switch to progress view
         self.stack.set_visible_child_name("progress")
         self.spinner.start()
+        
+        # Reset button visibility
         self.cancel_button.set_sensitive(True)
+        self.cancel_button.set_visible(True)
+        self.back_button.set_visible(False)
+        
+        # Reset progress
+        self.progress_bar.set_fraction(0.0)
+        self.progress_bar.set_text("")
+        self.status_label.set_text("")
+        
+        # Hide log by default
+        self.log_frame.set_visible(False)
+        self.toggle_log_button.set_label("Show Details")
         
         # Clear log
         self.log_buffer.set_text("")
         
         # Update progress label
-        self.progress_label.set_text(f"Rebasing to {image_url}...")
+        display_url = image_url.split("docker://")[-1] if "docker://" in image_url else image_url
+        self.progress_label.set_text(f"Rebasing to {display_url}...")
         
         def append_log_line(line):
-            """Append a line to the log view"""
+            """Append a line to the log view and update progress"""
             end_iter = self.log_buffer.get_end_iter()
             self.log_buffer.insert(end_iter, line + "\n")
             
             # Auto-scroll to bottom
             self.log_view.scroll_to_iter(end_iter, 0.0, False, 0.0, 0.0)
+            
+            # Parse progress information
+            self._parse_progress_line(line)
         
         def run_rebase():
             """Run rebase in background thread"""
@@ -390,14 +445,10 @@ class RebaseWindow(Adw.ApplicationWindow):
         
     def on_cancel_clicked(self, button):
         """Handle cancel button click"""
-        append_log_line = lambda line: None  # Dummy function
+        # Append cancellation message
+        end_iter = self.log_buffer.get_end_iter()
+        self.log_buffer.insert(end_iter, "\n=== Cancelling operation ===\n")
         
-        def append_log_line(line):
-            """Append a line to the log view"""
-            end_iter = self.log_buffer.get_end_iter()
-            self.log_buffer.insert(end_iter, line + "\n")
-            
-        append_log_line("\n=== Cancelling operation ===")
         button.set_sensitive(False)
         
         # Cancel the current command execution
@@ -407,14 +458,95 @@ class RebaseWindow(Adw.ApplicationWindow):
         try:
             subprocess.run(["flatpak-spawn", "--host", "rpm-ostree", "cancel"], 
                          capture_output=True, text=True)
-            append_log_line("Operation cancelled by user")
+            end_iter = self.log_buffer.get_end_iter()
+            self.log_buffer.insert(end_iter, "Operation cancelled by user\n")
         except Exception as e:
-            append_log_line(f"Error during cancel: {e}")
+            end_iter = self.log_buffer.get_end_iter()
+            self.log_buffer.insert(end_iter, f"Error during cancel: {e}\n")
+        
+        # Update UI
+        self.spinner.stop()
+        self.progress_label.set_text("Rebase cancelled")
+        self.progress_bar.set_fraction(0.0)
+        self.progress_bar.set_text("")
+        self.status_label.set_text("You can safely return to image selection.")
+        self.cancel_button.set_visible(False)
+        self.back_button.set_visible(True)
             
+    def on_toggle_log(self, button):
+        """Toggle log view visibility"""
+        if self.log_frame.get_visible():
+            self.log_frame.set_visible(False)
+            button.set_label("Show Details")
+        else:
+            self.log_frame.set_visible(True)
+            button.set_label("Hide Details")
+    
+    def _parse_progress_line(self, line):
+        """Parse progress information from log line"""
+        import re
+        
+        # Look for ostree chunk fetching (e.g., "[0/48] Fetching ostree chunk 180fde2153970ba7d4a (26.4 MB)...done")
+        chunk_match = re.search(r'\[(\d+)/(\d+)\]\s*Fetching ostree chunk', line)
+        if chunk_match:
+            current = int(chunk_match.group(1))
+            total = int(chunk_match.group(2))
+            
+            if total > 0:
+                percent = int((current / total) * 100)
+                self.progress_bar.set_fraction(current / total)
+                self.progress_bar.set_text(f"{percent}% ({current}/{total})")
+                
+                # Update status based on progress
+                if current == 0:
+                    self.status_label.set_text("Starting download...")
+                else:
+                    self.status_label.set_text(f"Fetching chunks...")
+            return
+        
+        # Look for other progress patterns (e.g., "Receiving objects: 95% (190/200)")
+        percent_match = re.search(r'(\d+)%\s*\((\d+)/(\d+)\)', line)
+        if percent_match:
+            percent = int(percent_match.group(1))
+            current = int(percent_match.group(2))
+            total = int(percent_match.group(3))
+            
+            self.progress_bar.set_fraction(percent / 100.0)
+            self.progress_bar.set_text(f"{percent}% ({current}/{total})")
+            return
+        
+        # Look for specific stages
+        if "Scanning metadata" in line:
+            self.status_label.set_text("Scanning metadata...")
+        elif "Pulling manifest" in line:
+            self.status_label.set_text("Pulling manifest...")
+        elif "Fetching ostree chunk" in line and "done" in line:
+            # Individual chunk completed, don't change status
+            pass
+        elif "Importing" in line:
+            self.status_label.set_text("Importing layers...")
+        elif "Checking out tree" in line:
+            self.status_label.set_text("Checking out files...")
+        elif "Writing objects" in line:
+            self.status_label.set_text("Writing objects...")
+        elif "Staging deployment" in line:
+            self.status_label.set_text("Staging deployment...")
+        elif "Transaction complete" in line:
+            self.status_label.set_text("Finalizing...")
+            self.progress_bar.set_fraction(1.0)
+            self.progress_bar.set_text("100%")
+        elif "Receiving objects" in line:
+            self.status_label.set_text("Downloading objects...")
+        elif "Receiving deltas" in line:
+            self.status_label.set_text("Processing deltas...")
+        elif "Resolving deltas" in line:
+            self.status_label.set_text("Resolving deltas...")
+    
     def rebase_complete(self, result):
         """Handle rebase completion"""
         self.spinner.stop()
-        self.cancel_button.set_sensitive(False)
+        self.cancel_button.set_visible(False)
+        self.back_button.set_visible(True)
         
         if result['success']:
             self.progress_label.set_text("Rebase completed successfully!")
@@ -436,29 +568,28 @@ class RebaseWindow(Adw.ApplicationWindow):
             # Refresh system status
             self.refresh_system_status()
         else:
-            self.progress_label.set_text("Rebase failed!")
+            self.progress_label.set_text("Rebase failed")
             error_msg = result.get('error', 'Unknown error')
             
-            # Show error dialog
-            dialog = Adw.MessageDialog.new(
-                self,
-                "Rebase Failed",
-                f"Failed to rebase system:\n\n{error_msg}"
-            )
-            dialog.add_response("ok", "OK")
-            dialog.set_default_response("ok")
-            dialog.add_css_class("error")
-            dialog.present()
-            
-            # Add back button to return to selection
-            back_button = Gtk.Button()
-            back_button.set_label("Back to Image Selection")
-            back_button.add_css_class("suggested-action")
-            back_button.connect("clicked", lambda w: self.stack.set_visible_child_name("selection"))
-            
-            # Add button to progress view
-            progress_box = self.stack.get_child_by_name("progress").get_first_child()
-            progress_box.append(back_button)
+            # Determine if it was cancelled or failed
+            if "cancelled" in error_msg.lower() or "cancel" in error_msg.lower():
+                self.status_label.set_text("The operation was cancelled.")
+                # Don't show an error dialog for cancellation - the UI already shows the status
+            else:
+                # For actual errors, show a simplified message
+                self.status_label.set_text("The rebase could not be completed.")
+                
+                # Show simplified error dialog
+                dialog = Adw.MessageDialog.new(
+                    self,
+                    "Rebase Failed",
+                    "The rebase operation could not be completed.\n\n"
+                    "This may be due to network issues or other system constraints."
+                )
+                dialog.add_response("ok", "OK")
+                dialog.set_default_response("ok")
+                dialog.add_css_class("error")
+                dialog.present()
             
     def show_error(self, message):
         """Show error dialog"""

@@ -448,16 +448,36 @@ class OSManagerWindow(Adw.ApplicationWindow):
         self.progress_label.add_css_class("title-2")
         progress_box.append(self.progress_label)
         
-        # Log view
-        log_frame = Gtk.Frame()
-        log_frame.set_size_request(700, 400)
-        log_frame.set_vexpand(True)
-        log_frame.set_hexpand(True)
+        # Progress bar
+        self.progress_bar = Gtk.ProgressBar()
+        self.progress_bar.set_size_request(400, -1)
+        self.progress_bar.set_show_text(True)
+        self.progress_bar.set_text("")
+        self.progress_bar.set_fraction(0.0)
+        progress_box.append(self.progress_bar)
+        
+        # Status label
+        self.status_label = Gtk.Label()
+        self.status_label.set_text("")
+        self.status_label.add_css_class("dim-label")
+        self.status_label.set_margin_top(6)
+        progress_box.append(self.status_label)
+        
+        # Toggle log button
+        self.toggle_log_button = Gtk.Button()
+        self.toggle_log_button.set_label("Show Details")
+        self.toggle_log_button.set_margin_top(12)
+        self.toggle_log_button.connect("clicked", self.on_toggle_log)
+        progress_box.append(self.toggle_log_button)
+        
+        # Log view (initially hidden)
+        self.log_frame = Gtk.Frame()
+        self.log_frame.set_size_request(700, 400)
+        self.log_frame.set_visible(False)
+        self.log_frame.set_margin_top(12)
         
         scrolled_log = Gtk.ScrolledWindow()
         scrolled_log.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        scrolled_log.set_vexpand(True)
-        scrolled_log.set_hexpand(True)
         
         self.log_view = Gtk.TextView()
         self.log_view.set_editable(False)
@@ -467,35 +487,33 @@ class OSManagerWindow(Adw.ApplicationWindow):
         self.log_view.set_margin_bottom(6)
         self.log_view.set_margin_start(6)
         self.log_view.set_margin_end(6)
-        self.log_view.set_vexpand(True)
-        self.log_view.set_hexpand(True)
         
         # Set up log buffer with tag for better visibility
         self.log_buffer = self.log_view.get_buffer()
         self.log_tag = self.log_buffer.create_tag("log", font="monospace")
         
         scrolled_log.set_child(self.log_view)
-        log_frame.set_child(scrolled_log)
-        progress_box.append(log_frame)
+        self.log_frame.set_child(scrolled_log)
+        progress_box.append(self.log_frame)
         
         # Button box
         self.button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         self.button_box.set_halign(Gtk.Align.CENTER)
+        self.button_box.set_margin_top(12)
         
-        # Cancel button
+        # Back button (hidden initially, left side when visible)
+        self.back_button = Gtk.Button()
+        self.back_button.set_label("Back to Configuration")
+        self.back_button.connect("clicked", self.on_back_clicked)
+        self.back_button.set_visible(False)
+        self.button_box.append(self.back_button)
+        
+        # Cancel button (right side)
         self.cancel_button = Gtk.Button()
         self.cancel_button.set_label("Cancel")
         self.cancel_button.add_css_class("destructive-action")
         self.cancel_button.connect("clicked", self.on_cancel_clicked)
         self.button_box.append(self.cancel_button)
-        
-        # Back button (hidden initially)
-        self.back_button = Gtk.Button()
-        self.back_button.set_label("Back to Configuration")
-        self.back_button.add_css_class("suggested-action")
-        self.back_button.connect("clicked", self.on_back_clicked)
-        self.back_button.set_visible(False)
-        self.button_box.append(self.back_button)
         
         # Reboot button (hidden initially)
         self.reboot_button = Gtk.Button()
@@ -761,6 +779,15 @@ class OSManagerWindow(Adw.ApplicationWindow):
         self.spinner.start()
         self.cancel_button.set_sensitive(True)  # Allow cancelling system updates
         self.back_button.set_visible(False)
+        
+        # Reset progress
+        self.progress_bar.set_fraction(0.0)
+        self.progress_bar.set_text("")
+        self.status_label.set_text("")
+        
+        # Hide log by default
+        self.log_frame.set_visible(False)
+        self.toggle_log_button.set_label("Show Details")
         
         # Clear log
         self.log_buffer.set_text("")
@@ -1039,6 +1066,15 @@ class OSManagerWindow(Adw.ApplicationWindow):
         self.cancel_button.set_sensitive(True)
         self.back_button.set_visible(False)
         
+        # Reset progress
+        self.progress_bar.set_fraction(0.0)
+        self.progress_bar.set_text("")
+        self.status_label.set_text("")
+        
+        # Hide log by default
+        self.log_frame.set_visible(False)
+        self.toggle_log_button.set_label("Show Details")
+        
         # Set flag to indicate we're doing a rebase (not system update)
         self.is_system_update = False
         
@@ -1131,6 +1167,10 @@ class OSManagerWindow(Adw.ApplicationWindow):
             # Update UI to show cancellation was successful
             self.progress_label.set_text("Operation cancelled")
             self.spinner.stop()
+            self.progress_bar.set_fraction(0.0)
+            self.progress_bar.set_text("")
+            self.status_label.set_text("You can safely go back to make different changes.")
+            self.cancel_button.set_visible(False)
             self.back_button.set_visible(True)
         except Exception as e:
             append_log_line(f"⚠️  Note: {e}")
@@ -1139,7 +1179,8 @@ class OSManagerWindow(Adw.ApplicationWindow):
     def rebase_complete(self, result):
         """Handle rebase completion"""
         self.spinner.stop()
-        self.cancel_button.set_sensitive(False)
+        self.cancel_button.set_visible(False)
+        self.back_button.set_visible(True)
         
         if result['success']:
             self.progress_label.set_text("Configuration changes applied successfully!")
@@ -1149,9 +1190,6 @@ class OSManagerWindow(Adw.ApplicationWindow):
             self.log_buffer.insert(end_iter, "\n" + "="*60 + "\n")
             self.log_buffer.insert(self.log_buffer.get_end_iter(), "✅ Configuration changes applied successfully!\n")
             self.log_buffer.insert(self.log_buffer.get_end_iter(), "Please reboot your system for the changes to take effect.\n")
-            
-            # Show back button
-            self.back_button.set_visible(True)
             
             # Clear pending changes
             self.pending_changes.clear()
@@ -1169,34 +1207,29 @@ class OSManagerWindow(Adw.ApplicationWindow):
             dialog.set_default_response("ok")
             dialog.present()
         else:
+            self.progress_label.set_text("Configuration change failed")
             error_msg = result.get('error', 'Unknown error')
             
-            # Check if the operation was cancelled
-            if 'cancelled' in error_msg.lower() or 'canceled' in error_msg.lower() or 'cancel' in error_msg.lower():
-                # This was a user cancellation, not an error
-                self.progress_label.set_text("Operation cancelled")
-                
-                # Add cancellation message to log if not already there
-                end_iter = self.log_buffer.get_end_iter()
-                current_text = self.log_buffer.get_text(self.log_buffer.get_start_iter(), end_iter, True)
-                if "Operation cancelled successfully" not in current_text:
-                    self.log_buffer.insert(end_iter, "\n" + "="*60 + "\n")
-                    self.log_buffer.insert(self.log_buffer.get_end_iter(), "ℹ️ Operation was cancelled\n")
-                    self.log_buffer.insert(self.log_buffer.get_end_iter(), "You can go back to make different changes.\n")
+            # Determine if it was cancelled or failed
+            if "cancelled" in error_msg.lower() or "cancel" in error_msg.lower():
+                self.status_label.set_text("The operation was cancelled.")
+                # Don't show an error dialog for cancellation - the UI already shows the status
             else:
-                # This is an actual error
-                self.progress_label.set_text("Configuration change failed!")
+                # For actual errors, show a simplified message
+                self.status_label.set_text("The configuration change could not be completed.")
                 
-                # Add error message to log
-                end_iter = self.log_buffer.get_end_iter()
-                self.log_buffer.insert(end_iter, "\n" + "="*60 + "\n")
-                self.log_buffer.insert(self.log_buffer.get_end_iter(), f"❌ Error: {error_msg}\n")
-                
-                # Show error dialog for actual errors
-                self.show_error(f"Failed to apply changes:\n{error_msg}")
-            
-            # Show back button
-            self.back_button.set_visible(True)
+                # Show simplified error dialog
+                dialog = Adw.MessageDialog()
+                dialog.set_transient_for(self)
+                dialog.set_title("Configuration Change Failed")
+                dialog.set_body(
+                    "The configuration change could not be completed.\n\n"
+                    "This may be due to network issues or other system constraints."
+                )
+                dialog.add_response("ok", "OK")
+                dialog.set_default_response("ok")
+                dialog.add_css_class("error")
+                dialog.present()
             
     def on_back_clicked(self, button):
         """Handle back button click"""
@@ -1218,8 +1251,77 @@ class OSManagerWindow(Adw.ApplicationWindow):
         dialog.present()
         
             
+    def on_toggle_log(self, button):
+        """Toggle log view visibility"""
+        if self.log_frame.get_visible():
+            self.log_frame.set_visible(False)
+            button.set_label("Show Details")
+        else:
+            self.log_frame.set_visible(True)
+            button.set_label("Hide Details")
+    
+    def _parse_progress_line(self, line):
+        """Parse progress information from log line"""
+        import re
+        
+        # Look for ostree chunk fetching (e.g., "[0/48] Fetching ostree chunk 180fde2153970ba7d4a (26.4 MB)...done")
+        chunk_match = re.search(r'\[(\d+)/(\d+)\]\s*Fetching ostree chunk', line)
+        if chunk_match:
+            current = int(chunk_match.group(1))
+            total = int(chunk_match.group(2))
+            
+            if total > 0:
+                percent = int((current / total) * 100)
+                self.progress_bar.set_fraction(current / total)
+                self.progress_bar.set_text(f"{percent}% ({current}/{total})")
+                
+                # Update status based on progress
+                if current == 0:
+                    self.status_label.set_text("Starting download...")
+                else:
+                    self.status_label.set_text(f"Fetching chunks...")
+            return
+        
+        # Look for other progress patterns (e.g., "Receiving objects: 95% (190/200)")
+        percent_match = re.search(r'(\d+)%\s*\((\d+)/(\d+)\)', line)
+        if percent_match:
+            percent = int(percent_match.group(1))
+            current = int(percent_match.group(2))
+            total = int(percent_match.group(3))
+            
+            self.progress_bar.set_fraction(percent / 100.0)
+            self.progress_bar.set_text(f"{percent}% ({current}/{total})")
+            return
+        
+        # Look for specific stages
+        if "Scanning metadata" in line:
+            self.status_label.set_text("Scanning metadata...")
+        elif "Pulling manifest" in line:
+            self.status_label.set_text("Pulling manifest...")
+        elif "Fetching ostree chunk" in line and "done" in line:
+            # Individual chunk completed, don't change status
+            pass
+        elif "Importing" in line:
+            self.status_label.set_text("Importing layers...")
+        elif "Checking out tree" in line:
+            self.status_label.set_text("Checking out files...")
+        elif "Writing objects" in line:
+            self.status_label.set_text("Writing objects...")
+        elif "Staging deployment" in line:
+            self.status_label.set_text("Staging deployment...")
+        elif "Transaction complete" in line:
+            self.status_label.set_text("Finalizing...")
+            self.progress_bar.set_fraction(1.0)
+            self.progress_bar.set_text("100%")
+        elif "Receiving objects" in line:
+            self.status_label.set_text("Downloading objects...")
+        elif "Receiving deltas" in line:
+            self.status_label.set_text("Processing deltas...")
+        elif "Resolving deltas" in line:
+            self.status_label.set_text("Resolving deltas...")
+            
     def append_log_line(self, line):
-        """Append a line to the log buffer"""
+        """Append a line to the log buffer and update progress"""
         end_iter = self.log_buffer.get_end_iter()
         self.log_buffer.insert(end_iter, line + "\n")
         
@@ -1227,6 +1329,9 @@ class OSManagerWindow(Adw.ApplicationWindow):
         mark = self.log_buffer.create_mark(None, end_iter, False)
         self.log_view.scroll_mark_onscreen(mark)
         self.log_buffer.delete_mark(mark)
+        
+        # Parse progress information
+        self._parse_progress_line(line)
         
     def run_system_update(self):
         """Run system update using ujust update or appropriate command"""
