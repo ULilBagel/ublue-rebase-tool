@@ -417,18 +417,6 @@ class RollbackWindow(Adw.ApplicationWindow):
         )
         progress_dialog.set_modal(True)
         
-        # Add spinner using a box
-        content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        content_box.set_halign(Gtk.Align.CENTER)
-        
-        spinner = Gtk.Spinner()
-        spinner.start()
-        spinner.set_size_request(32, 32)
-        content_box.append(spinner)
-        
-        # Set the content area
-        progress_dialog.set_child(content_box)
-        
         progress_dialog.present()
         
         def run_rollback():
@@ -452,18 +440,6 @@ class RollbackWindow(Adw.ApplicationWindow):
             f"Rebasing to {image_url}..."
         )
         progress_dialog.set_modal(True)
-        
-        # Add spinner using a box
-        content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        content_box.set_halign(Gtk.Align.CENTER)
-        
-        spinner = Gtk.Spinner()
-        spinner.start()
-        spinner.set_size_request(32, 32)
-        content_box.append(spinner)
-        
-        # Set the content area
-        progress_dialog.set_child(content_box)
         
         progress_dialog.present()
         
