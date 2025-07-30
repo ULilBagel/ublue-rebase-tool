@@ -412,6 +412,12 @@ class OSManagerWindow(Adw.ApplicationWindow):
         self.content_box.set_margin_start(12)
         self.content_box.set_margin_end(12)
         
+        # Create a clamp to limit maximum width while centering content
+        clamp = Adw.Clamp()
+        clamp.set_maximum_size(600)  # Maximum width for content
+        clamp.set_tightening_threshold(600)
+        clamp.set_child(self.content_box)
+        
         # System Settings section at the top (for Universal Blue images)
         if self.current_image_name in ["bazzite", "bluefin", "aurora"]:
             self.create_system_settings_section()
@@ -425,7 +431,7 @@ class OSManagerWindow(Adw.ApplicationWindow):
         else:
             self.create_unsupported_section()
             
-        scrolled.set_child(self.content_box)
+        scrolled.set_child(clamp)
         self.stack.add_named(scrolled, "config")
         self.stack.set_visible_child_name("config")
         
