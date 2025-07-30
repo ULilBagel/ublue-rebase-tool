@@ -353,15 +353,19 @@ class RebaseWindow(Adw.ApplicationWindow):
         
     def refresh_system_status(self):
         """Refresh the current system status"""
-        deployment = self.deployment_manager.get_current_deployment()
-        
-        if deployment:
-            image_name = self._extract_image_name(deployment.origin)
-            self.system_row.set_title(image_name)
-            self.system_row.set_subtitle(f"Version: {deployment.version} • Deployed: {deployment.timestamp}")
-        else:
-            self.system_row.set_title("Unknown System")
-            self.system_row.set_subtitle("Unable to determine current deployment")
+        try:
+            deployment = self.deployment_manager.get_current_deployment()
+            
+            if deployment:
+                image_name = self._extract_image_name(deployment.origin)
+                self.system_row.set_title(image_name)
+                self.system_row.set_subtitle(f"Version: {deployment.version} • Deployed: {deployment.timestamp}")
+            else:
+                self.system_row.set_title("Unknown System")
+                self.system_row.set_subtitle("Unable to determine current deployment")
+        except Exception as e:
+            print(f"Error refreshing system status: {e}")
+            # Don't crash if refresh fails
             
     def on_rebase_clicked(self, button):
         """Handle rebase button click"""
@@ -579,12 +583,14 @@ class RebaseWindow(Adw.ApplicationWindow):
             dialog.add_response("ok", "OK")
             dialog.set_default_response("ok")
             
-            # Switch back to selection view after dialog is closed
-            dialog.connect("response", lambda d, r: self.stack.set_visible_child_name("selection"))
+            # Connect response handler and switch back after dialog closes
+            def on_dialog_response(dialog, response):
+                self.stack.set_visible_child_name("selection")
+                # Refresh system status after switching views
+                GLib.idle_add(self.refresh_system_status)
+                
+            dialog.connect("response", on_dialog_response)
             dialog.present()
-            
-            # Refresh system status
-            self.refresh_system_status()
         else:
             self.progress_label.set_text("Rebase failed")
             error_msg = result.get('error', 'Unknown error')
