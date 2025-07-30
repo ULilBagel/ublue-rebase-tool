@@ -410,17 +410,24 @@ class RollbackWindow(Adw.ApplicationWindow):
     def execute_rollback(self, deployment):
         """Execute the rollback command"""
         # Create progress dialog
-        progress_dialog = Adw.MessageDialog()
-        progress_dialog.set_transient_for(self)
-        progress_dialog.set_title("Rolling Back...")
-        progress_dialog.set_body("Executing rollback operation...")
+        progress_dialog = Adw.MessageDialog.new(
+            self,
+            "Rolling Back...",
+            "Executing rollback operation..."
+        )
         progress_dialog.set_modal(True)
         
-        # Add spinner
+        # Add spinner using a box
+        content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        content_box.set_halign(Gtk.Align.CENTER)
+        
         spinner = Gtk.Spinner()
         spinner.start()
         spinner.set_size_request(32, 32)
-        progress_dialog.set_extra_child(spinner)
+        content_box.append(spinner)
+        
+        # Set the content area
+        progress_dialog.set_child(content_box)
         
         progress_dialog.present()
         
@@ -439,17 +446,24 @@ class RollbackWindow(Adw.ApplicationWindow):
     def execute_rebase(self, image_url):
         """Execute rebase to a specific image"""
         # Create progress dialog
-        progress_dialog = Adw.MessageDialog()
-        progress_dialog.set_transient_for(self)
-        progress_dialog.set_title("Restoring Deployment...")
-        progress_dialog.set_body(f"Rebasing to {image_url}...")
+        progress_dialog = Adw.MessageDialog.new(
+            self,
+            "Restoring Deployment...",
+            f"Rebasing to {image_url}..."
+        )
         progress_dialog.set_modal(True)
         
-        # Add spinner
+        # Add spinner using a box
+        content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        content_box.set_halign(Gtk.Align.CENTER)
+        
         spinner = Gtk.Spinner()
         spinner.start()
         spinner.set_size_request(32, 32)
-        progress_dialog.set_extra_child(spinner)
+        content_box.append(spinner)
+        
+        # Set the content area
+        progress_dialog.set_child(content_box)
         
         progress_dialog.present()
         
@@ -508,20 +522,22 @@ class RollbackWindow(Adw.ApplicationWindow):
             
     def show_success(self, message):
         """Show success dialog"""
-        dialog = Adw.MessageDialog()
-        dialog.set_transient_for(self)
-        dialog.set_title("Success")
-        dialog.set_body(message)
+        dialog = Adw.MessageDialog.new(
+            self,
+            "Success",
+            message
+        )
         dialog.add_response("ok", "OK")
         dialog.set_default_response("ok")
         dialog.present()
         
     def show_error(self, message):
         """Show error dialog"""
-        dialog = Adw.MessageDialog()
-        dialog.set_transient_for(self)
-        dialog.set_title("Error")
-        dialog.set_body(message)
+        dialog = Adw.MessageDialog.new(
+            self,
+            "Error",
+            message
+        )
         dialog.add_response("ok", "OK")
         dialog.set_default_response("ok")
         dialog.add_css_class("error")

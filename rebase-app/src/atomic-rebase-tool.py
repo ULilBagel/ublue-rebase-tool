@@ -420,10 +420,9 @@ class RebaseWindow(Adw.ApplicationWindow):
             self.progress_label.set_text("Rebase completed successfully!")
             
             # Show success dialog
-            dialog = Adw.MessageDialog()
-            dialog.set_transient_for(self)
-            dialog.set_title("Rebase Complete")
-            dialog.set_body(
+            dialog = Adw.MessageDialog.new(
+                self,
+                "Rebase Complete",
                 "System rebase completed successfully!\n\n"
                 "Please reboot your system to boot into the new image."
             )
@@ -441,10 +440,11 @@ class RebaseWindow(Adw.ApplicationWindow):
             error_msg = result.get('error', 'Unknown error')
             
             # Show error dialog
-            dialog = Adw.MessageDialog()
-            dialog.set_transient_for(self)
-            dialog.set_title("Rebase Failed")
-            dialog.set_body(f"Failed to rebase system:\n\n{error_msg}")
+            dialog = Adw.MessageDialog.new(
+                self,
+                "Rebase Failed",
+                f"Failed to rebase system:\n\n{error_msg}"
+            )
             dialog.add_response("ok", "OK")
             dialog.set_default_response("ok")
             dialog.add_css_class("error")
@@ -462,10 +462,11 @@ class RebaseWindow(Adw.ApplicationWindow):
             
     def show_error(self, message):
         """Show error dialog"""
-        dialog = Adw.MessageDialog()
-        dialog.set_transient_for(self)
-        dialog.set_title("Error")
-        dialog.set_body(message)
+        dialog = Adw.MessageDialog.new(
+            self,
+            "Error",
+            message
+        )
         dialog.add_response("ok", "OK")
         dialog.set_default_response("ok")
         dialog.add_css_class("error")
