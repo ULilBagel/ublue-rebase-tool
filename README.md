@@ -141,4 +141,4 @@ GPL-3.0 - See [LICENSE](LICENSE) file for details
 - [Fedora Project](https://fedoraproject.org/) for Silverblue and Kinoite
 - [GNOME](https://gnome.org/) project for GTK4 and libadwaita
 - [Flatpak](https://flatpak.org/) team for the sandboxing technology
-- [Claude](https://claude.a) Claude for assisting with the creation
+- [Claude](https://claude.a) for assisting with the creation
