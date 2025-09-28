@@ -112,7 +112,6 @@ All tools run sandboxed with minimal required permissions:
 
 - **Read-only access**: System information and configuration files
 - **System operations**: Via D-Bus to rpm-ostree and systemd
-- **No network access**: All operations are local
 - **User confirmation**: All system modifications require explicit approval
 
 ## 📋 Supported Systems
@@ -142,3 +141,4 @@ GPL-3.0 - See [LICENSE](LICENSE) file for details
 - [Fedora Project](https://fedoraproject.org/) for Silverblue and Kinoite
 - [GNOME](https://gnome.org/) project for GTK4 and libadwaita
 - [Flatpak](https://flatpak.org/) team for the sandboxing technology
+- [Claude](https://claude.a) for assisting with the creation
