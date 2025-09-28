@@ -230,6 +230,40 @@ class ImageConfig:
     }
 
 
+# Update tool configuration
+UPDATE_TOOLS = [
+    {
+        "name": "uupd",
+        "command": ["flatpak-spawn", "--host", "pkexec", "uupd", "--json"],
+        "check_command": "uupd",
+        "reboot_indicators": ["(R)eboot", "(r)eboot", "restart required", "Reboot required", "System restart required"],
+        "json_output": True,  # Using JSON for structured progress data
+        "needs_tty": False,
+    },
+    {
+        "name": "ujust",
+        "command": ["flatpak-spawn", "--host", "ujust", "update"],
+        "check_command": "ujust",
+        "reboot_indicators": ["(R)eboot", "(r)eboot"],
+        "json_output": False,
+    },
+    {
+        "name": "bootc",
+        "command": ["flatpak-spawn", "--host", "pkexec", "bootc", "upgrade"],
+        "check_command": "bootc",
+        "reboot_indicators": ["(R)eboot", "(r)eboot", "restart required", "Reboot required"],
+        "json_output": False,
+    },
+    {
+        "name": "rpm-ostree",
+        "command": ["flatpak-spawn", "--host", "rpm-ostree", "upgrade"],
+        "check_command": "rpm-ostree",
+        "reboot_indicators": ["(R)eboot", "(r)eboot"],
+        "json_output": False,
+    }
+]
+
+
 class AtomicOSManager(Adw.Application):
     """Main application class for OS Manager"""
     
@@ -271,7 +305,7 @@ class OSManagerWindow(Adw.ApplicationWindow):
         self.is_system_update = False
         self.update_process = None
         
-        self.set_default_size(800, 600)
+        self.set_default_size(700, -1)  # Width only, let height be natural
         
         # Detect current image
         self.detect_current_image()
@@ -664,26 +698,25 @@ class OSManagerWindow(Adw.ApplicationWindow):
         branch_row.set_title("Update Branch")
         branch_row.set_subtitle("Select the update channel")
         
-        branch_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-        branch_box.set_valign(Gtk.Align.CENTER)
+        # Create dropdown for branches
+        branch_options = Gtk.StringList()
+        branches = self.current_config.get("branches", [])
+        current_index = 0
         
-        self.branch_group = None
-        for branch in self.current_config.get("branches", []):
-            radio = Gtk.CheckButton()
-            radio.set_label(branch.title())
-            radio.set_group(self.branch_group)
-            
+        for i, branch in enumerate(branches):
+            branch_options.append(branch)
             if branch == self.current_branch:
-                radio.set_active(True)
+                current_index = i
                 
-            radio.connect("toggled", self.on_branch_changed, branch)
-            
-            if not self.branch_group:
-                self.branch_group = radio
-                
-            branch_box.append(radio)
-            
-        branch_row.add_suffix(branch_box)
+        self.branch_dropdown = Gtk.DropDown()
+        self.branch_dropdown.set_model(branch_options)
+        self.branch_dropdown.set_valign(Gtk.Align.CENTER)
+        self.branch_dropdown.set_selected(current_index)
+        
+        # Connect change signal
+        self.branch_dropdown.connect("notify::selected", self.on_branch_dropdown_changed)
+        
+        branch_row.add_suffix(self.branch_dropdown)
         parent.add(branch_row)
         
     def create_gpu_selection(self, parent):
@@ -846,8 +879,21 @@ class OSManagerWindow(Adw.ApplicationWindow):
             self.update_apply_button()
         
     def on_branch_changed(self, radio, branch):
-        """Handle branch selection change"""
+        """Handle branch selection change (legacy radio button handler)"""
         if radio.get_active():
+            if branch != self.current_branch:
+                self.pending_changes["branch"] = branch
+            elif "branch" in self.pending_changes:
+                del self.pending_changes["branch"]
+            self.update_apply_button()
+    
+    def on_branch_dropdown_changed(self, dropdown, param):
+        """Handle branch selection change from dropdown"""
+        selected_index = dropdown.get_selected()
+        branches = self.current_config.get("branches", [])
+        
+        if 0 <= selected_index < len(branches):
+            branch = branches[selected_index]
             if branch != self.current_branch:
                 self.pending_changes["branch"] = branch
             elif "branch" in self.pending_changes:
@@ -1262,9 +1308,68 @@ class OSManagerWindow(Adw.ApplicationWindow):
         if self.log_frame.get_visible():
             self.log_frame.set_visible(False)
             button.set_label("Show Details")
+            # Let window shrink back to natural size
+            self.set_default_size(-1, -1)
         else:
             self.log_frame.set_visible(True)
             button.set_label("Hide Details")
+            # Expand window to show log
+            self.set_default_size(800, 700)
+    
+    def _parse_uupd_json(self, line):
+        """Parse JSON output from uupd and update progress"""
+        try:
+            # Try to parse as JSON
+            data = json.loads(line)
+            
+            # Check if it's a progress update
+            if isinstance(data, dict):
+                # Look for overall progress percentage
+                if "overall" in data:
+                    overall = int(data["overall"])
+                    self.progress_bar.set_fraction(overall / 100.0)
+                    self.progress_bar.set_text(f"{overall}%")
+                
+                # Update status from description
+                if "description" in data:
+                    desc = data["description"]
+                    self.status_label.set_text(desc)
+                
+                # Log message if present
+                if "msg" in data:
+                    msg = data["msg"]
+                    # Return the message to be logged
+                    return msg
+                
+                # Alternative progress field
+                if "progress" in data and isinstance(data["progress"], (int, float)):
+                    # This might be step number, not percentage
+                    pass
+                
+                # Step progress (0.0 to 1.0)
+                if "step_progress" in data:
+                    step_prog = float(data["step_progress"])
+                    if step_prog > 0:
+                        # Use step progress if no overall progress
+                        if "overall" not in data:
+                            percent = int(step_prog * 100)
+                            self.progress_bar.set_fraction(step_prog)
+                            self.progress_bar.set_text(f"{percent}%")
+                
+                # Return empty string to suppress JSON from log
+                return ""
+            
+            # If it's a simple string in JSON, return it
+            if isinstance(data, str):
+                return data
+                
+        except json.JSONDecodeError:
+            # Not JSON, return as-is
+            pass
+        except Exception as e:
+            print(f"[DEBUG] Error parsing JSON: {e}")
+        
+        return None
     
     def _parse_progress_line(self, line):
         """Parse progress information from log line"""
@@ -1299,6 +1404,38 @@ class OSManagerWindow(Adw.ApplicationWindow):
             self.progress_bar.set_text(f"{percent}% ({current}/{total})")
             return
         
+        # Look for simple percentage patterns (e.g., "95%", "Progress: 50%")
+        simple_percent = re.search(r'(?:progress[:\s]*)?(\d+)\s*%', line, re.IGNORECASE)
+        if simple_percent:
+            percent = int(simple_percent.group(1))
+            self.progress_bar.set_fraction(percent / 100.0)
+            self.progress_bar.set_text(f"{percent}%")
+            return
+        
+        # Look for uupd's specific progress format - "overall" is the percentage
+        uupd_overall = re.search(r'overall:\s*(\d+)', line)
+        if uupd_overall:
+            overall = int(uupd_overall.group(1))
+            self.progress_bar.set_fraction(overall / 100.0)
+            self.progress_bar.set_text(f"{overall}%")
+            return
+            
+        uupd_step_progress = re.search(r'step_progress:\s*(\d+(?:\.\d+)?)', line)
+        if uupd_step_progress:
+            step_progress = float(uupd_step_progress.group(1))
+            # step_progress appears to be 0-1 range
+            percent = int(step_progress * 100)
+            self.progress_bar.set_fraction(step_progress)
+            self.progress_bar.set_text(f"{percent}%")
+            return
+        
+        # Update status based on uupd description
+        if "description:" in line:
+            desc_match = re.search(r'description:\s*(.+)', line)
+            if desc_match:
+                description = desc_match.group(1).strip()
+                self.status_label.set_text(description)
+        
         # Look for specific stages
         if "Scanning metadata" in line:
             self.status_label.set_text("Scanning metadata...")
@@ -1330,6 +1467,68 @@ class OSManagerWindow(Adw.ApplicationWindow):
             self.status_label.set_text("Processing deltas...")
         elif "Resolving deltas" in line:
             self.status_label.set_text("Resolving deltas...")
+        # uupd-specific progress patterns
+        elif "Checking for updates" in line.lower():
+            self.status_label.set_text("Checking for updates...")
+        elif "System update" in line and "available" in line:
+            self.status_label.set_text("System update available")
+        elif "Updating system" in line.lower():
+            self.status_label.set_text("Updating system...")
+            # Estimate progress based on stage
+            self.progress_bar.set_fraction(0.3)
+            self.progress_bar.set_text("30%")
+        elif "Downloading" in line and ("MB" in line or "GB" in line or "KB" in line):
+            self.status_label.set_text("Downloading updates...")
+            # Look for download progress in format like "10.5MB/50MB"
+            download_match = re.search(r'(\d+(?:\.\d+)?)\s*([KMG]B)\s*/\s*(\d+(?:\.\d+)?)\s*([KMG]B)', line)
+            if download_match:
+                current_val = float(download_match.group(1))
+                current_unit = download_match.group(2)
+                total_val = float(download_match.group(3))
+                total_unit = download_match.group(4)
+                
+                # Convert to same unit
+                if current_unit == total_unit:
+                    fraction = current_val / total_val
+                    percent = int(fraction * 100)
+                    self.progress_bar.set_fraction(fraction)
+                    self.progress_bar.set_text(f"{percent}%")
+        elif "Installing" in line and "update" in line.lower():
+            self.status_label.set_text("Installing updates...")
+            # Estimate 60% when installing
+            self.progress_bar.set_fraction(0.6)
+            self.progress_bar.set_text("60%")
+        elif "Updating flatpaks" in line.lower() or "flatpak" in line.lower() and "updat" in line.lower():
+            self.status_label.set_text("Updating Flatpak applications...")
+            # Estimate 70% for flatpaks
+            self.progress_bar.set_fraction(0.7)
+            self.progress_bar.set_text("70%")
+        elif "Updating containers" in line.lower() or "container" in line.lower() and "updat" in line.lower():
+            self.status_label.set_text("Updating containers...")
+            # Estimate 80% for containers
+            self.progress_bar.set_fraction(0.8)
+            self.progress_bar.set_text("80%")
+        elif "brew" in line.lower() and "updat" in line.lower():
+            self.status_label.set_text("Updating Brew packages...")
+            # Estimate 85% for brew
+            self.progress_bar.set_fraction(0.85)
+            self.progress_bar.set_text("85%")
+        elif "distrobox" in line.lower() and "updat" in line.lower():
+            self.status_label.set_text("Updating Distrobox containers...")
+            # Estimate 90% for distrobox
+            self.progress_bar.set_fraction(0.9)
+            self.progress_bar.set_text("90%")
+        elif "Starting" in line and "update" in line.lower():
+            self.status_label.set_text("Starting update process...")
+            # Starting = 10%
+            self.progress_bar.set_fraction(0.1)
+            self.progress_bar.set_text("10%")
+        elif "Completed" in line.lower() or "Complete" in line:
+            self.status_label.set_text("Update complete")
+            self.progress_bar.set_fraction(1.0)
+            self.progress_bar.set_text("100%")
+        elif "Failed" in line or "Error" in line:
+            self.status_label.set_text("Update failed - check logs")
             
     def append_log_line(self, line):
         """Append a line to the log buffer and update progress"""
@@ -1384,18 +1583,51 @@ class OSManagerWindow(Adw.ApplicationWindow):
         append_log("Starting system update...")
         append_log("=" * 50)
         
-        # Try ujust update first (available on all Universal Blue images)
-        update_cmd = ["flatpak-spawn", "--host", "ujust", "update"]
-        
-        try:
-            # Check if ujust is available
-            check_cmd = ["flatpak-spawn", "--host", "which", "ujust"]
+        # Find first available update tool
+        selected_tool = None
+        for tool in UPDATE_TOOLS:
+            check_cmd = ["flatpak-spawn", "--host", "which", tool["check_command"]]
             check_result = subprocess.run(check_cmd, capture_output=True)
             
-            if check_result.returncode != 0:
-                # Fallback to ublue-update if ujust not available
-                append_log("ujust not found, trying ublue-update...")
-                update_cmd = ["flatpak-spawn", "--host", "ublue-update"]
+            if check_result.returncode == 0:
+                selected_tool = tool
+                append_log(f"Found {tool['name']}")
+                break
+            else:
+                append_log(f"{tool['name']} not found, checking next tool...")
+        
+        if not selected_tool:
+            # No update tools available
+            append_log("✗ No update tool found (uupd, ujust, bootc, or rpm-ostree)")
+            append_log("Please ensure at least one update tool is installed on your system.")
+            update_ui("No update tool available", finished=True, success=False)
+            return
+        
+        # Use the selected tool
+        append_log(f"Using {selected_tool['name']} for system update...")
+        update_cmd = selected_tool["command"]
+        is_json_output = selected_tool.get("json_output", False)
+        
+        # Create JSON-aware logging function
+        def append_log_json_aware(line):
+            if is_json_output and selected_tool["name"] == "uupd":
+                # Try to parse as JSON first
+                json_result = self._parse_uupd_json(line)
+                if json_result is not None:
+                    if json_result:  # Only log if there's a message
+                        append_log(json_result)
+                else:
+                    # JSON parsing failed, log as-is
+                    append_log(line)
+            else:
+                # Not JSON output, log normally
+                append_log(line)
+            
+            # Debug logging
+            if line and len(output_lines) < 20:
+                print(f"[DEBUG] uupd output: {line[:200]}")
+        
+        try:
                 
             # Run the update command
             self.update_process = subprocess.Popen(
@@ -1438,16 +1670,17 @@ class OSManagerWindow(Adw.ApplicationWindow):
                     continue
                     
                 line_stripped = line.rstrip()
-                append_log(line_stripped)
+                append_log_json_aware(line_stripped)
                 output_lines.append(line_stripped)
                 
-                # Check for the (R)eboot prompt
-                if "(R)eboot" in line_stripped or "(r)eboot" in line_stripped:
-                    append_log("[Reboot prompt detected - showing action buttons]")
-                    show_action_buttons = True
-                    # Immediately show buttons when detected
-                    update_ui("Updates staged - Action required", finished=True, success=True, updates_found=True)
-                    break
+                # Check for reboot indicators from selected tool
+                for indicator in selected_tool["reboot_indicators"]:
+                    if indicator in line_stripped:
+                        append_log(f"[Reboot prompt detected: '{indicator}' - showing action buttons]")
+                        show_action_buttons = True
+                        # Immediately show buttons when detected
+                        update_ui("Updates staged - Action required", finished=True, success=True, updates_found=True)
+                        break
                     
             if self.update_process:
                 self.update_process.wait()
@@ -1507,6 +1740,14 @@ class OSManagerWindow(Adw.ApplicationWindow):
         self.back_button.set_visible(False)
         self.reboot_button.set_visible(False)
         self.close_button.set_visible(False)
+        
+        # Hide log if it's visible and reset window size
+        if self.log_frame.get_visible():
+            self.log_frame.set_visible(False)
+            self.toggle_log_button.set_label("Show Details")
+        
+        # Reset window to natural size for config view
+        self.set_default_size(-1, -1)
         
         # Switch back to config view
         self.stack.set_visible_child_name("config")

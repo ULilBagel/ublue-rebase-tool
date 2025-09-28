@@ -449,15 +449,31 @@ class RebaseWindow(Adw.ApplicationWindow):
         self.progress_label.set_text(f"Rebasing to {display_url}...")
         
         def append_log_line(line):
-            """Append a line to the log view and update progress"""
-            end_iter = self.log_buffer.get_end_iter()
-            self.log_buffer.insert(end_iter, line + "\n")
+            """Append a line to the log view and update progress
             
-            # Auto-scroll to bottom
-            self.log_view.scroll_to_iter(end_iter, 0.0, False, 0.0, 0.0)
+            Thread-safe: This function is called from a background thread,
+            so all UI updates must be wrapped in GLib.idle_add()
+            """
+            def update_ui():
+                # Check if widgets still exist
+                if not self.log_buffer or not self.log_view:
+                    return False
+                    
+                try:
+                    end_iter = self.log_buffer.get_end_iter()
+                    self.log_buffer.insert(end_iter, line + "\n")
+                    
+                    # Auto-scroll to bottom
+                    self.log_view.scroll_to_iter(end_iter, 0.0, False, 0.0, 0.0)
+                    
+                    # Parse progress information
+                    self._parse_progress_line(line)
+                except Exception as e:
+                    print(f"Error updating UI: {e}")
+                    
+                return False  # Don't repeat
             
-            # Parse progress information
-            self._parse_progress_line(line)
+            GLib.idle_add(update_ui)
         
         def run_rebase():
             """Run rebase in background thread"""
@@ -588,55 +604,55 @@ class RebaseWindow(Adw.ApplicationWindow):
             
             if result['success']:
                 self.progress_label.set_text("Rebase completed successfully!")
-            
-            # Show success dialog
-            dialog = Adw.MessageDialog()
-            dialog.set_transient_for(self)
-            dialog.set_heading("Rebase Complete")
-            dialog.set_body(
-                "System rebase completed successfully!\n\n"
-                "Please reboot your system to boot into the new image."
-            )
-            dialog.add_response("ok", "OK")
-            dialog.set_default_response("ok")
-            
-            # Show dialog and handle response
-            dialog.present()
-            
-            # Don't connect to response signal - let the dialog close naturally
-            # and only switch back to selection view after a delay
-            def switch_back():
-                if self.stack:
-                    self.stack.set_visible_child_name("selection")
-                    self.refresh_system_status()
-                return False
-            
-            # Switch back after 100ms to ensure dialog is properly closed
-            GLib.timeout_add(100, switch_back)
-        else:
-            self.progress_label.set_text("Rebase failed")
-            error_msg = result.get('error', 'Unknown error')
-            
-            # Determine if it was cancelled or failed
-            if "cancelled" in error_msg.lower() or "cancel" in error_msg.lower():
-                self.status_label.set_text("The operation was cancelled.")
-                # Don't show an error dialog for cancellation - the UI already shows the status
-            else:
-                # For actual errors, show a simplified message
-                self.status_label.set_text("The rebase could not be completed.")
                 
-                # Show simplified error dialog
+                # Show success dialog
                 dialog = Adw.MessageDialog()
                 dialog.set_transient_for(self)
-                dialog.set_heading("Rebase Failed")
+                dialog.set_heading("Rebase Complete")
                 dialog.set_body(
-                    "The rebase operation could not be completed.\n\n"
-                    "This may be due to network issues or other system constraints."
+                    "System rebase completed successfully!\n\n"
+                    "Please reboot your system to boot into the new image."
                 )
                 dialog.add_response("ok", "OK")
                 dialog.set_default_response("ok")
-                dialog.add_css_class("error")
+                
+                # Show dialog and handle response
                 dialog.present()
+                
+                # Don't connect to response signal - let the dialog close naturally
+                # and only switch back to selection view after a delay
+                def switch_back():
+                    if self.stack:
+                        self.stack.set_visible_child_name("selection")
+                        self.refresh_system_status()
+                    return False
+                
+                # Switch back after 100ms to ensure dialog is properly closed
+                GLib.timeout_add(100, switch_back)
+            else:
+                self.progress_label.set_text("Rebase failed")
+                error_msg = result.get('error', 'Unknown error')
+                
+                # Determine if it was cancelled or failed
+                if "cancelled" in error_msg.lower() or "cancel" in error_msg.lower():
+                    self.status_label.set_text("The operation was cancelled.")
+                    # Don't show an error dialog for cancellation - the UI already shows the status
+                else:
+                    # For actual errors, show a simplified message
+                    self.status_label.set_text("The rebase could not be completed.")
+                    
+                    # Show simplified error dialog
+                    dialog = Adw.MessageDialog()
+                    dialog.set_transient_for(self)
+                    dialog.set_heading("Rebase Failed")
+                    dialog.set_body(
+                        "The rebase operation could not be completed.\n\n"
+                        "This may be due to network issues or other system constraints."
+                    )
+                    dialog.add_response("ok", "OK")
+                    dialog.set_default_response("ok")
+                    dialog.add_css_class("error")
+                    dialog.present()
         except Exception as e:
             print(f"ERROR in rebase_complete: {e}")
             import traceback
