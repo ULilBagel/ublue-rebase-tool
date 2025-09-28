@@ -9,3 +9,19 @@ Thumbs.db
 *.log
 *.tmp
 .claude/
+
+# Non-essential scripts
+test-*.sh
+temp-*.sh
+tmp-*.sh
+debug-*.sh
+local-*.sh
+personal-*.sh
+dev-*.sh
+*-test.sh
+*-temp.sh
+*-tmp.sh
+*-debug.sh
+*-local.sh
+*-personal.sh
+*-dev.sh
